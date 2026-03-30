@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Michael McRoberts — Healthspan Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface2: #f0f2f5;
+  --surface3: #e8ebf0;
+  --border: rgba(0,0,0,0.09);
+  --green: #16a34a;
+  --green-dim: rgba(22,163,74,0.1);
+  --amber: #d97706;
+  --amber-dim: rgba(217,119,6,0.1);
+  --red: #dc2626;
+  --red-dim: rgba(220,38,38,0.08);
+  --blue: #2563eb;
+  --blue-dim: rgba(37,99,235,0.1);
+  --purple: #7c3aed;
+  --text: #111827;
+  --muted: #6b7280;
+  --r: 14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── TOP HEADER ── */
+.header {
+  background: #f4f6f9;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 28px 40px;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 24px;
+}
+.patient-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 28px;
+  font-style: italic;
+  letter-spacing: -0.5px;
+  color: #1e3a5f;
+}
+.patient-name span {
+  font-size: 13px;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+  font-style: normal;
+  display: block;
+  margin-bottom: 4px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.score-block {
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--r);
+  padding: 12px 20px;
+  min-width: 180px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.score-block .label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+.score-block .value { font-family: 'DM Serif Display', serif; font-size: 48px; line-height: 1; }
+.score-block .value.good { color: var(--green); }
+.score-block .value.warn { color: var(--amber); }
+
+/* ── ACTION SCROLL BAR ── */
+.action-scroll-bar {
+  background: #f4f6f9;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 10px 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+.action-scroll-bar::-webkit-scrollbar { height: 3px; }
+.action-scroll-bar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+.action-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--muted); font-weight: 700; flex-shrink: 0; margin-right: 4px;
+}
+.action-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 500;
+  padding: 5px 12px; border-radius: 20px;
+  flex-shrink: 0; white-space: nowrap;
+  cursor: default;
+}
+.action-pill.red { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.action-pill.amber { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.action-pill.green { background: #f0fdf4; color: #14532d; border: 1px solid #bbf7d0; }
+.action-pill.blue { background: #eff6ff; color: #1e3a8a; border: 1px solid #bfdbfe; }
+.action-divider { width: 1px; height: 20px; background: #d1d5db; flex-shrink: 0; margin: 0 4px; }
+.header-pill {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.pill { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 14px; font-size: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.pill strong { color: var(--text); font-weight: 600; }
+.pill span { color: var(--muted); }
+
+/* ── ALERTS BAR ── */
+.alerts {
+  background: #fff5f5;
+  border-bottom: 1px solid rgba(220,38,38,0.15);
+  padding: 12px 40px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.alert-chip {
+  background: var(--red-dim); border: 1px solid rgba(255,95,95,0.3);
+  border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--red);
+  display: flex; align-items: center; gap: 6px;
+}
+.alert-chip.amber { background: var(--amber-dim); border-color: rgba(245,166,35,0.3); color: var(--amber); }
+.alerts-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 600; }
+
+/* ── TABS ── */
+.tab-bar {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+  background: #ffffff;
+  overflow-x: auto;
+}
+.tab {
+  padding: 16px 20px; border: none; background: transparent;
+  color: var(--muted); font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+  transition: all 0.2s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+
+/* ── LAYOUT ── */
+.main { padding: 32px 40px; max-width: 1300px; margin: 0 auto; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 24px;
+}
+.card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 18px;
+}
+.card-title {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+  color: var(--muted); font-weight: 600;
+}
+.section-title {
+  font-family: 'DM Serif Display', serif; font-size: 22px;
+  margin-bottom: 20px; color: var(--text);
+}
+
+/* ── SUMMARY ── */
+.summary-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.summary-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--green), var(--blue), var(--purple));
+}
+.summary-card p { font-size: 15px; line-height: 1.8; color: #374151; margin-bottom: 12px; }
+.summary-card p:last-child { margin-bottom: 0; }
+.tag { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 20px; margin: 3px; font-weight: 500; }
+.tag.green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(61,220,132,0.2); }
+.tag.red { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,95,95,0.2); }
+.tag.amber { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,166,35,0.2); }
+.tag.blue { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(91,164,245,0.2); }
+
+/* ── METRIC TILES ── */
+.metric-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px;
+  display: flex; flex-direction: column;
+}
+.metric-tile .icon { font-size: 22px; margin-bottom: 10px; }
+.metric-tile .val { font-family: 'DM Serif Display', serif; font-size: 30px; line-height: 1; }
+.metric-tile .val.good { color: var(--green); }
+.metric-tile .val.warn { color: var(--amber); }
+.metric-tile .val.bad { color: var(--red); }
+.metric-tile .val.blue { color: var(--blue); }
+.metric-tile .unit { font-size: 12px; color: var(--muted); margin-left: 3px; }
+.metric-tile .label { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.metric-tile .trend { font-size: 11px; margin-top: 8px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.metric-tile .trend.up { color: var(--green); }
+.metric-tile .trend.down-bad { color: var(--red); }
+.metric-tile .trend.neutral { color: var(--muted); }
+
+/* ── BIOMARKER TABLE ── */
+.bio-table { width: 100%; border-collapse: collapse; }
+.bio-table th {
+  text-align: left; font-size: 10px; letter-spacing: 1.5px; color: var(--muted);
+  text-transform: uppercase; padding: 10px 12px;
+  border-bottom: 1px solid var(--border); font-weight: 600;
+}
+.bio-table td { padding: 12px 12px; border-bottom: 1px solid #f3f4f6; }
+.bio-table tr:last-child td { border-bottom: none; }
+.bio-table tr:hover td { background: #f9fafb; }
+.bio-name { font-weight: 600; font-size: 13px; }
+.bio-val { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+.bio-val.ok { color: var(--green); }
+.bio-val.warn { color: var(--amber); }
+.bio-val.bad { color: var(--red); }
+.bio-range { color: #6b7280; font-size: 12px; font-family: 'DM Mono', monospace; }
+.bio-note { font-size: 12px; color: #4b5563; max-width: 260px; }
+.status-badge {
+  font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: 600;
+  letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap;
+}
+.status-badge.optimal { background: var(--green-dim); color: var(--green); }
+.status-badge.borderline { background: var(--amber-dim); color: var(--amber); }
+.status-badge.concern { background: var(--red-dim); color: var(--red); }
+.status-badge.flag { background: rgba(184,138,248,0.15); color: var(--purple); }
+
+/* ── TREND SPARKLINE ── */
+.sparkline { display: flex; align-items: flex-end; gap: 3px; height: 28px; margin-top: 4px; }
+.spark-bar {
+  flex: 1; border-radius: 2px 2px 0 0;
+  background: #e5e7eb;
+  min-height: 4px;
+  transition: background 0.3s;
+}
+.spark-bar.green { background: rgba(61,220,132,0.5); }
+.spark-bar.amber { background: rgba(245,166,35,0.5); }
+.spark-bar.red { background: rgba(255,95,95,0.5); }
+.spark-bar.last { background: var(--green); }
+.spark-bar.last.amber { background: var(--amber); }
+.spark-bar.last.red { background: var(--red); }
+
+/* ── RISK BARS ── */
+.risk-item { margin-bottom: 20px; }
+.risk-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.risk-name { font-weight: 600; font-size: 14px; }
+.risk-level-text { font-size: 12px; font-family: 'DM Mono', monospace; }
+.risk-bar-bg { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+.risk-bar-fill { height: 100%; border-radius: 3px; transition: width 1.2s ease; }
+.risk-bar-fill.low { background: linear-gradient(90deg, var(--green), #2db870); }
+.risk-bar-fill.medium { background: linear-gradient(90deg, var(--amber), #e08c10); }
+.risk-bar-fill.high { background: linear-gradient(90deg, var(--red), #cc3030); }
+.risk-note { font-size: 12px; color: var(--muted); }
+
+/* ── SCHEDULE ── */
+.sched-item {
+  display: flex; gap: 20px; padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.sched-item:last-child { border-bottom: none; }
+.sched-date { min-width: 70px; text-align: center; }
+.sched-month { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+.sched-day { font-family: 'DM Serif Display', serif; font-size: 32px; color: var(--blue); line-height: 1; }
+.sched-year { font-size: 10px; color: var(--muted); }
+.sched-body h4 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.sched-body p { font-size: 12px; color: var(--muted); }
+.sched-tag { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 8px; margin-top: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.sched-tag.urgent { background: var(--red-dim); color: var(--red); }
+.sched-tag.priority { background: rgba(184,138,248,0.15); color: var(--purple); }
+.sched-tag.routine { background: var(--blue-dim); color: var(--blue); }
+.sched-tag.annual { background: var(--green-dim); color: var(--green); }
+
+/* ── MEDS ── */
+.med-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.med-item:last-child { border-bottom: none; }
+.med-icon { width: 34px; height: 34px; border-radius: 8px; background: #f9fafb; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.med-name { font-weight: 600; font-size: 13px; }
+.med-dose { font-size: 12px; color: var(--muted); }
+
+/* ── HIDDEN ── */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── TREND SECTION ── */
+.trend-row { display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.trend-row:last-child { border-bottom: none; }
+.trend-label { font-size: 13px; font-weight: 500; }
+.trend-dots { display: flex; align-items: center; gap: 0; flex: 1; position: relative; }
+.trend-dot-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.trend-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--muted);
+  border: 2px solid var(--bg);
+  position: relative; z-index: 2;
+}
+.trend-dot.ok { background: var(--green); }
+.trend-dot.warn { background: var(--amber); }
+.trend-dot.bad { background: var(--red); }
+.trend-dot.last { width: 14px; height: 14px; }
+.trend-val { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 3px; }
+.trend-line { position: absolute; top: 5px; left: 0; right: 0; height: 2px; background: #f3f4f6; z-index: 1; }
+
+/* ── WINS/RISKS LISTS ── */
+.check-list { display: flex; flex-direction: column; gap: 10px; }
+.check-item { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; }
+.check-item .icon { flex-shrink: 0; margin-top: 1px; }
+
+/* ── DIVIDER ── */
+.divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+/* ── IMPORTANT NOTICE ── */
+.notice {
+  background: #eff6ff;
+  border: 1px solid rgba(37,99,235,0.2);
+  border-radius: 10px; padding: 14px 18px;
+  font-size: 12px; color: #1e40af;
+  margin-bottom: 24px;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="patient-name">
+    <span>Healthspan Dashboard · Confidential</span>
+    Michael McRoberts
+  </div>
+  <div class="header-pill">
+    <div class="pill"><span>Date of Birth </span><strong>Nov 2, 1958 · Age 67</strong></div>
+    <div class="pill"><span>Latest Labs </span><strong>Feb 9, 2026</strong></div>
+    <div class="pill"><span>Lab History </span><strong>Jan 2023 – Feb 2026</strong></div>
+  </div>
+  <div class="header-pill">
+    <div class="pill"><span>Physician </span><strong>Dr. John F. LaLonde, D.O.</strong></div>
+    <div class="pill"><span>Function Health </span><strong>Dr. Srinivas Boppana, D.O.</strong></div>
+    <div class="pill"><span>Panels Analyzed </span><strong>7 Reports · 80+ Biomarkers</strong></div>
+  </div>
+    <div class="score-block">
+    <div class="label">Healthspan Score</div>
+    <div class="value warn">70</div>
+    <div class="label" style="margin-top:4px">/ 100 · CAD + Post-Prostatectomy</div>
+    <div style="margin-top:10px;text-align:left;border-top:1px solid #e5e7eb;padding-top:10px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#9ca3af;font-weight:700;margin-bottom:7px">Priority Actions</div>
+      <div style="font-size:11px;color:#991b1b;line-height:1.6">❗ PSA surveillance — monitor closely</div>
+      <div style="font-size:11px;color:#991b1b;line-height:1.6">❗ HbA1c — get tested now</div>
+      <div style="font-size:11px;color:#991b1b;line-height:1.6">❗ Confirm aspirin 81mg</div>
+      <div style="font-size:11px;color:#92400e;line-height:1.6">⚡ LDL → target &lt;55 mg/dL</div>
+      <div style="font-size:11px;color:#92400e;line-height:1.6">⚡ Add ezetimibe + Vascepa</div>
+      <div style="font-size:11px;color:#92400e;line-height:1.6">⚡ Sleep study — apnea risk</div>
+      <div style="font-size:11px;color:#1e40af;line-height:1.6">📋 Annual stress test Oct '26</div>
+      <div style="font-size:11px;color:#14532d;line-height:1.6">✅ Surgery: clear margins · pT3a</div>
+    </div>
+  </div>
+</div>
+
+<!-- ALERTS -->
+<div class="alerts">
+  <span class="alerts-label">⚡ Needs Attention</span>
+  <span class="alert-chip">❤️ CAC Score 523 — significant coronary calcium (75th %ile)</span>
+  <span class="alert-chip">🫀 LAD: moderate ~30% stenosis (CCTA May 2024)</span>
+  <span class="alert-chip">🩸 Glucose 101 — borderline prediabetes (Feb 2026)</span>
+  <span class="alert-chip">🔬 PCa pT3a — Gleason 3+4=7 · margins clear · EPE present · PSA surveillance critical</span>
+  <span class="alert-chip amber">🧬 FSH 14.6 H — elevated · testosterone eval post-surgery</span>
+  <span class="alert-chip amber">⚡ Low Lymphocytes — persistent trend</span>
+</div>
+
+<!-- ACTION SCROLL BAR -->
+<div class="action-scroll-bar">
+  <span class="action-label">🎯 Risk Countermeasures</span>
+  <span class="action-divider"></span>
+  <span class="action-pill red">❗ PSA q3–6mo surveillance</span>
+  <span class="action-pill red">❗ HbA1c — order today</span>
+  <span class="action-pill red">❗ Confirm aspirin 81mg</span>
+  <span class="action-divider"></span>
+  <span class="action-pill amber">⚡ Increase statin → LDL &lt;55</span>
+  <span class="action-pill amber">⚡ Add ezetimibe</span>
+  <span class="action-pill amber">⚡ Rx Vascepa (EPA 4g/day)</span>
+  <span class="action-pill amber">⚡ Discuss colchicine w/ Sarabi</span>
+  <span class="action-pill amber">⚡ Sleep study — apnea risk</span>
+  <span class="action-pill amber">⚡ Address prediabetes — diet + exercise</span>
+  <span class="action-pill amber">⚡ Carotid ultrasound — overdue</span>
+  <span class="action-pill amber">⚡ Colonoscopy — confirm status</span>
+  <span class="action-pill amber">⚡ Testosterone eval — after oncology clearance</span>
+  <span class="action-divider"></span>
+  <span class="action-pill blue">📋 Strength train 3–4×/wk</span>
+  <span class="action-pill blue">📋 Zone 2 cardio 45min 4×/wk</span>
+  <span class="action-pill blue">📋 Mediterranean diet + EVOO</span>
+  <span class="action-pill blue">📋 Reduce alcohol → 1–2/wk</span>
+  <span class="action-pill blue">📋 Stop eating 3hrs before bed</span>
+  <span class="action-pill blue">📋 Post-meal 10min walks</span>
+  <span class="action-pill blue">📋 Add magnesium glycinate + CoQ10</span>
+  <span class="action-pill blue">📋 Annual stress test — Oct 2026</span>
+  <span class="action-pill blue">📋 DEXA scan — repeat 2026</span>
+  <span class="action-divider"></span>
+  <span class="action-pill green">✅ Prostatectomy — clear margins</span>
+  <span class="action-pill green">✅ Continue fish oil (index 9.1%)</span>
+  <span class="action-pill green">✅ Maintain Vitamin D</span>
+  <span class="action-pill green">✅ Thyroid controlled</span>
+  <span class="action-pill green">✅ BP well-managed</span>
+</div>
+
+<!-- TABS -->
+<div class="tab-bar">
+  <button class="tab active" onclick="switchTab('overview', this)">📊 Overview</button>
+  <button class="tab" onclick="switchTab('cardiac', this)">❤️ Cardiac</button>
+  <button class="tab" onclick="switchTab('prostate', this)">🔬 Prostate</button>
+  <button class="tab" onclick="switchTab('biomarkers', this)">🧪 Biomarkers</button>
+  <button class="tab" onclick="switchTab('trends', this)">📈 Trends</button>
+  <button class="tab" onclick="switchTab('risks', this)">⚠️ Risk Profile</button>
+  <button class="tab" onclick="switchTab('cooper', this)">🏥 Cooper Clinic</button>
+  <button class="tab" onclick="switchTab('actions', this)">🎯 Action Plan</button>
+  <button class="tab" onclick="switchTab('schedule', this)">📅 Schedule</button>
+  <button class="tab" onclick="switchTab('meds', this)">💊 Medications</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  TAB 1: OVERVIEW                          -->
+<!-- ══════════════════════════════════════════ -->
+<div id="tab-overview" class="tab-content active">
+<div class="main">
+
+  <div class="notice">⚠️ This dashboard is for informational purposes and to support conversations with your healthcare providers. It is not medical advice. All findings should be discussed with Dr. LaLonde and your care team.</div>
+
+  <div class="summary-card">
+    <div class="card-title" style="margin-bottom:14px">🔬 Your Health Picture — Plain English</div>
+    <p>Michael, you have a genuinely strong health foundation for a 67-year-old man who is clearly paying attention to his body. You are being managed by excellent physicians and your cardiac workup — which now includes a CT coronary angiogram, two echocardiograms, a nuclear stress test, and an advanced lipid panel — gives a detailed and actionable picture of your heart health. The headline: your heart is functioning well, but you have real coronary artery disease that requires consistent management and annual monitoring.</p>
+    <p><strong style="color:var(--amber)">Cardiac: The Most Important Chapter.</strong> Your May 2024 CT coronary angiogram found a Coronary Artery Calcium score of 523 — this places you at the 75th percentile for your age and sex, meaning significant calcified plaque is present. More importantly, your LAD (the "widow maker" artery — the most critical coronary vessel) has a moderate mixed plaque causing approximately 30% stenosis. Your nuclear stress test in October 2025 was reassuring: no ischemia detected, ejection fraction 66% (excellent), and you achieved 92% of your target heart rate. Your echocardiogram in January 2026 shows mild left ventricular hypertrophy (expected with your blood pressure history) and mild mitral regurgitation — both stable and not alarming. You are on annual stress testing, which is exactly the right protocol.</p>
+    <p>Beyond the heart, your fasting glucose has crossed into pre-diabetes territory (101 mg/dL), and your PSA is at the upper limit with a concerning low free PSA percentage (13%). Your lipid profile — while excellent on standard markers — shows your LDL was 88 in August 2024 (higher than the 71 on your statin-optimized panel), suggesting the Lipitor is working hard. The overall picture: you are a well-monitored man with known CAD who is doing the right things — aggressive screening, consistent medications, and ongoing testing.</p>
+    <div style="margin-top:14px">
+      <span class="tag amber">⚠️ CAC 523 — significant coronary calcium</span>
+      <span class="tag amber">⚠️ LAD 30% stenosis — moderate lesion</span>
+      <span class="tag green">✅ Stress test clear — no ischemia</span>
+      <span class="tag green">✅ EF 66–70% — excellent heart function</span>
+      <span class="tag green">✅ Excellent omega-3 index (9.1%)</span>
+      <span class="tag green">✅ LDL well-controlled on statin</span>
+      <span class="tag red">⚠️ Glucose trending to prediabetes</span>
+      <span class="tag red">⚠️ PSA at limit + low free PSA%</span>
+      <span class="tag amber">⚡ Annual cardiac stress test required</span>
+    </div>
+  </div>
+      <span class="tag amber">⚡ Persistent low lymphocytes</span>
+    </div>
+  </div>
+
+  <!-- KEY METRICS -->
+  <div class="section-title">Key Metrics (Most Recent)</div>
+  <div class="grid4">
+    <div class="metric-tile">
+      <div class="icon">🩸</div>
+      <div class="val warn">101<span class="unit">mg/dL</span></div>
+      <div class="label">Fasting Glucose</div>
+      <div class="trend down-bad">↑ Was 93 in Jun '25 · Prediabetes threshold</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">🫀</div>
+      <div class="val good">139<span class="unit">mg/dL</span></div>
+      <div class="label">Total Cholesterol</div>
+      <div class="trend up">↓ Down from 186 in Jan '23 · Excellent</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">📉</div>
+      <div class="val good">71<span class="unit">mg/dL</span></div>
+      <div class="label">LDL Cholesterol</div>
+      <div class="trend up">↓ Down from 125 in Jan '23 · Outstanding</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">🟢</div>
+      <div class="val good">55<span class="unit">mg/dL</span></div>
+      <div class="label">HDL Cholesterol</div>
+      <div class="trend up">↑ Improved · Protective range</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">🔬</div>
+      <div class="val warn">4.0<span class="unit">ng/mL</span></div>
+      <div class="label">PSA Total</div>
+      <div class="trend down-bad">⚠️ At upper limit · Free% only 13% (Low)</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">🦠</div>
+      <div class="val good">78<span class="unit">mL/min</span></div>
+      <div class="label">eGFR (Kidney)</div>
+      <div class="trend up">↑ Improved from 65 · Good function</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">🐟</div>
+      <div class="val good">9.1<span class="unit">% wt</span></div>
+      <div class="label">Omega-3 Index</div>
+      <div class="trend up">✅ Optimal · Top 25th percentile</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">💪</div>
+      <div class="val warn">399<span class="unit">ng/dL</span></div>
+      <div class="label">Total Testosterone</div>
+      <div class="trend neutral">→ In range · Lower-optimal for longevity</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <!-- WINS -->
+    <div class="card">
+      <div class="card-title">✅ What You're Doing Well</div>
+      <div style="margin-top:14px" class="check-list">
+        <div class="check-item"><span class="icon">🐟</span><span>Omega-3 index 9.1% — this is genuinely exceptional. Optimal is ≥5.5%, you're well above. Major cardiac protection.</span></div>
+        <div class="check-item"><span class="icon">🫀</span><span>Lipid panel dramatically improved — total cholesterol dropped from 186 to 139, LDL from 125 to 71. Statin working well.</span></div>
+        <div class="check-item"><span class="icon">🩺</span><span>Liver enzymes fully recovered — AST/ALT spiked in early 2025 (AST hit 65) but have normalized to 31/31 as of Feb 2026.</span></div>
+        <div class="check-item"><span class="icon">🧬</span><span>No autoimmune markers — ANA negative, rheumatoid factor &lt;10. Your immune system isn't attacking itself.</span></div>
+        <div class="check-item"><span class="icon">🧠</span><span>Homocysteine 10.3 µmol/L — within range. Important marker for brain and vascular health.</span></div>
+        <div class="check-item"><span class="icon">🦠</span><span>Kidney function solid and improving — eGFR up to 78 from a low of 65. Creatinine stable at 1.05.</span></div>
+        <div class="check-item"><span class="icon">🧪</span><span>Extremely proactive — 7 labs in 3 years including Function Health advanced panel. You're catching things early.</span></div>
+      </div>
+    </div>
+
+    <!-- TOP RISKS -->
+    <div class="card">
+      <div class="card-title">⚡ Areas Needing Action</div>
+      <div style="margin-top:14px" class="check-list">
+        <div class="check-item"><span class="icon">🩸</span><span><strong style="color:var(--red)">Fasting glucose 101 mg/dL</strong> — crossed the prediabetes threshold (≥100). Was 102 in Jan '23, dropped to 93 mid-2025, now back up. Diet and exercise intervention needed now.</span></div>
+        <div class="check-item"><span class="icon">🔬</span><span><strong style="color:var(--red)">PSA at 4.0 + Free PSA% = 13%</strong> — PSA has been trending down (was 5.88 in Sep '24), but free PSA% of 13% is flagged low (&gt;25% desired). Combined, this warrants urologist evaluation and possible biopsy discussion.</span></div>
+        <div class="check-item"><span class="icon">🧬</span><span><strong style="color:var(--amber)">FSH elevated at 14.6 mIU/mL</strong> — this combined with testosterone at 399 ng/dL suggests your body is working harder to produce testosterone. Worth discussing TRT evaluation.</span></div>
+        <div class="check-item"><span class="icon">🛡️</span><span><strong style="color:var(--amber)">Lymphocytes running low</strong> — absolute lymphocytes have been in the 961–1099 range (low normal). This is an immune function marker worth monitoring, especially given age.</span></div>
+        <div class="check-item"><span class="icon">💧</span><span><strong style="color:var(--amber)">BUN/Creatinine ratio 28</strong> — mildly elevated (normal &lt;22). May indicate mild dehydration or increased protein intake. Easy to address.</span></div>
+        <div class="check-item"><span class="icon">🦋</span><span><strong style="color:var(--muted)">DHEA-S 126 mcg/dL</strong> — on the lower end for a 67-year-old male. This adrenal hormone drops with age and affects energy, immunity, and body composition.</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  TAB 2: ALL BIOMARKERS                    -->
+<!-- ══════════════════════════════════════════ -->
+<div id="tab-biomarkers" class="tab-content">
+<div class="main">
+
+  <div class="section-title">Complete Biomarker Results <span style="font-size:14px;color:var(--muted);font-family:'DM Sans',sans-serif;font-style:normal">— Most Recent Values</span></div>
+
+  <!-- METABOLIC -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">🔬 Comprehensive Metabolic Panel</div><div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Latest: Feb 9, 2026</div></div>
+    <table class="bio-table">
+      <thead><tr><th>Marker</th><th>Your Value</th><th>Optimal Range</th><th>Status</th><th>What It Means</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Fasting Glucose</td><td><span class="bio-val warn">101 mg/dL</span></td><td class="bio-range">65–99</td><td><span class="status-badge borderline">Borderline</span></td><td class="bio-note">Crossed prediabetes line. Was 93 in Jun '25. Trending the wrong way — action needed now.</td></tr>
+        <tr><td class="bio-name">BUN (Urea Nitrogen)</td><td><span class="bio-val warn">29 mg/dL</span></td><td class="bio-range">7–25</td><td><span class="status-badge borderline">Mildly High</span></td><td class="bio-note">Slightly elevated. Often reflects dehydration or high protein diet. Kidney function itself is fine.</td></tr>
+        <tr><td class="bio-name">Creatinine</td><td><span class="bio-val ok">1.05 mg/dL</span></td><td class="bio-range">0.70–1.35</td><td><span class="status-badge optimal">Optimal</span></td><td class="bio-note">Stable and normal. Measures kidney filtering function.</td></tr>
+        <tr><td class="bio-name">eGFR</td><td><span class="bio-val ok">78 mL/min</span></td><td class="bio-range">≥60</td><td><span class="status-badge optimal">Good</span></td><td class="bio-note">Kidney filtering rate — improved from 65 in Mar '25. Solid function.</td></tr>
+        <tr><td class="bio-name">BUN/Creatinine Ratio</td><td><span class="bio-val warn">28</span></td><td class="bio-range">6–22</td><td><span class="status-badge borderline">Elevated</span></td><td class="bio-note">Mildly high — suggests possible mild dehydration. Drink more water, especially on lab days.</td></tr>
+        <tr><td class="bio-name">Sodium</td><td><span class="bio-val ok">142 mmol/L</span></td><td class="bio-range">135–146</td><td><span class="status-badge optimal">Optimal</span></td><td class="bio-note">Perfect electrolyte balance.</td></tr>
+        <tr><td class="bio-name">Potassium</td><td><span class="bio-val ok">5.3 mmol/L</span></td><td class="bio-range">3.5–5.3</td><td><span class="status-badge optimal">At upper limit</span></td><td class="bio-note">Right at the top of normal. Lisinopril can raise potassium. Worth monitoring.</td></tr>
+        <tr><td class="bio-name">Calcium</td><td><span class="bio-val ok">9.8 mg/dL</span></td><td class="bio-range">8.6–10.3</td><td><span class="status-badge optimal">Optimal</span></td><td class="bio-note">Normal bone and parathyroid function.</td></tr>
+        <tr><td class="bio-name">Albumin</td><td><span class="bio-val ok">4.9 g/dL</span></td><td class="bio-range">3.6–5.1</td><td><span class="status-badge optimal">Excellent</span></td><td class="bio-note">High albumin = good nutrition and liver health. 4.9 is strong.</td></tr>
+        <tr><td class="bio-name">Total Protein</td><td><span class="bio-val ok">7.1 g/dL</span></td><td class="bio-range">6.1–8.1</td><td><span class="status-badge optimal">Optimal</span></td><td class="bio-note">Normal protein metabolism.</td></tr>
+        <tr><td class="bio-name">Bilirubin, Total</td><td><span class="bio-val ok">0.8 mg/dL</span></td><td class="bio-range">0.2–1.2</td><td><span class="status-badge optimal">Optimal</span></td><td class="bio-note">Normal liver waste processing.</td></tr>
+        <tr><td class="bio-name">Alkaline Phosphatase</td><td><span class="bio-val ok">62 U/L</span></td><td class="bio-range">35–144</td><td><span class="status-badge optimal">Optimal</span></td><td class="bio-note">Normal. Measures liver and bone health.</td></tr>
+        <tr><td class="bio-name">AST (liver enzyme)</td><td><span class="bio-val ok">31 U/L</span></td><td class="bio-range">10–35</td><td><span class="status-badge optimal">Normalized</span></td><td class="bio-note">Was 65 in Mar '25 (flagged). Now fully back to normal — great recovery.</td></tr>
+        <tr><td class="bio-name">ALT (liver enzyme)</td><td><span class="bio-val ok">31 U/L</span></td><td class="bio-range">9–46</td><td><span class="status-badge optimal">Normalized</span></td><td class="bio-note">Was 48 in Mar '25 (flagged). Now fully back to normal.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- LIPIDS -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">🫀 Lipid Panel (Cardiovascular)</div><div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Latest: Mar 2025</div></div>
+    <table class="bio-table">
+      <thead><tr><th>Marker</th><th>Your Value</th><th>Optimal Range</th><th>Status</th><th>What It Means</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Total Cholesterol</td><td><span class="bio-val ok">139 mg/dL</span></td><td class="bio-range">&lt;200</td><td><span class="status-badge optimal">Excellent</span></td><td class="bio-note">Down from 186 in Jan '23. Outstanding improvement — Lipitor working well.</td></tr>
+        <tr><td class="bio-name">LDL Cholesterol</td><td><span class="bio-val ok">71 mg/dL</span></td><td class="bio-range">&lt;100</td><td><span class="status-badge optimal">Excellent</span></td><td class="bio-note">Down from 125. For longevity, &lt;70 is ideal — you're right there.</td></tr>
+        <tr><td class="bio-name">HDL Cholesterol</td><td><span class="bio-val ok">55 mg/dL</span></td><td class="bio-range">≥40</td><td><span class="status-badge optimal">Good</span></td><td class="bio-note">Protective "good" cholesterol. Higher is better.</td></tr>
+        <tr><td class="bio-name">Triglycerides</td><td><span class="bio-val ok">45 mg/dL</span></td><td class="bio-range">&lt;150</td><td><span class="status-badge optimal">Excellent</span></td><td class="bio-note">Very low — indicates excellent metabolic and dietary control.</td></tr>
+        <tr><td class="bio-name">CHOL/HDL Ratio</td><td><span class="bio-val ok">2.5</span></td><td class="bio-range">&lt;5.0</td><td><span class="status-badge optimal">Excellent</span></td><td class="bio-note">Top-tier cardiovascular risk indicator. Below 3.5 is optimal.</td></tr>
+        <tr><td class="bio-name">Non-HDL Cholesterol</td><td><span class="bio-val ok">84 mg/dL</span></td><td class="bio-range">&lt;130</td><td><span class="status-badge optimal">Excellent</span></td><td class="bio-note">Strong secondary cardiac risk marker.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CBC -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">🩸 Complete Blood Count (CBC)</div><div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Latest: Feb 9, 2026</div></div>
+    <table class="bio-table">
+      <thead><tr><th>Marker</th><th>Your Value</th><th>Optimal Range</th><th>Status</th><th>What It Means</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">WBC</td><td><span class="bio-val ok">4.6 K/µL</span></td><td class="bio-range">3.8–10.8</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Stable white blood cells — no infection or immune crisis.</td></tr>
+        <tr><td class="bio-name">RBC</td><td><span class="bio-val ok">4.92 M/µL</span></td><td class="bio-range">4.20–5.80</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Normal red blood cell production.</td></tr>
+        <tr><td class="bio-name">Hemoglobin</td><td><span class="bio-val ok">15.2 g/dL</span></td><td class="bio-range">13.2–17.1</td><td><span class="status-badge optimal">Good</span></td><td class="bio-note">Normal oxygen-carrying capacity. No anemia.</td></tr>
+        <tr><td class="bio-name">Hematocrit</td><td><span class="bio-val ok">46.2%</span></td><td class="bio-range">39.4–51.1%</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Good proportion of red blood cells.</td></tr>
+        <tr><td class="bio-name">Platelets</td><td><span class="bio-val ok">199 K/µL</span></td><td class="bio-range">140–400</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Normal clotting potential.</td></tr>
+        <tr><td class="bio-name">Abs. Lymphocytes</td><td><span class="bio-val warn">961 cells/µL</span></td><td class="bio-range">850–3900</td><td><span class="status-badge borderline">Low Normal</span></td><td class="bio-note">Consistently running at the lower end of normal. Important immune cell — worth tracking trend.</td></tr>
+        <tr><td class="bio-name">Abs. Neutrophils</td><td><span class="bio-val ok">3151 cells/µL</span></td><td class="bio-range">1500–7800</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Normal infection-fighting cells.</td></tr>
+        <tr><td class="bio-name">Neutrophil/Lymphocyte Ratio</td><td><span class="bio-val warn">~3.3</span></td><td class="bio-range">&lt;2.5 optimal</span></td><td><span class="status-badge borderline">Watch</span></td><td class="bio-note">NLR is an inflammation/immune stress marker. Above 3 is worth monitoring.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- HORMONES & ADVANCED -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">🧬 Hormones & Advanced Markers</div><div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Function Health Panel: Jun 20, 2025</div></div>
+    <table class="bio-table">
+      <thead><tr><th>Marker</th><th>Your Value</th><th>Optimal Range</th><th>Status</th><th>What It Means</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Testosterone, Total</td><td><span class="bio-val warn">399 ng/dL</span></td><td class="bio-range">250–1100</td><td><span class="status-badge borderline">Lower-Optimal</span></td><td class="bio-note">In range but on the low end. For healthy longevity in men, 500–800+ is more optimal. Worth evaluating.</td></tr>
+        <tr><td class="bio-name">Testosterone, Free</td><td><span class="bio-val ok">71.5 pg/mL</span></td><td class="bio-range">35–155</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Free (usable) testosterone is mid-range — functional daily testosterone level.</td></tr>
+        <tr><td class="bio-name">SHBG</td><td><span class="bio-val ok">31 nmol/L</span></td><td class="bio-range">22–77</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Sex hormone binding globulin — not too high, which means testosterone is available to your cells.</td></tr>
+        <tr><td class="bio-name">FSH</td><td><span class="bio-val bad">14.6 H mIU/mL</span></td><td class="bio-range">1.4–12.8</td><td><span class="status-badge concern">Elevated</span></td><td class="bio-note">Elevated FSH means your pituitary is signaling your testes harder to produce testosterone — a sign the system is working but under strain.</td></tr>
+        <tr><td class="bio-name">LH</td><td><span class="bio-val ok">7.2 mIU/mL</span></td><td class="bio-range">1.6–15.2</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Luteinizing hormone — normal.</td></tr>
+        <tr><td class="bio-name">Estradiol</td><td><span class="bio-val ok">21 pg/mL</span></td><td class="bio-range">&lt;39</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Estrogen in healthy range for a man — not too high, not too low.</td></tr>
+        <tr><td class="bio-name">DHEA-Sulfate</td><td><span class="bio-val warn">126 mcg/dL</span></td><td class="bio-range">20–217</td><td><span class="status-badge borderline">Lower-range</span></td><td class="bio-note">DHEA declines with age. 126 is within normal but lower-optimal. Affects energy, immunity, and body composition.</td></tr>
+        <tr><td class="bio-name">PSA, Total</td><td><span class="bio-val warn">4.0 ng/mL</span></td><td class="bio-range">&lt;4.0</td><td><span class="status-badge concern">At Limit</span></td><td class="bio-note">PSA has trended down from 5.88 (Sep '24) to 3.86 (Mar '25) to 4.0 (Jun '25). Right at the limit. Needs ongoing monitoring.</td></tr>
+        <tr><td class="bio-name">PSA, Free %</td><td><span class="bio-val bad">13%</span></td><td class="bio-range">&gt;25%</span></td><td><span class="status-badge concern">Low — Flagged</span></td><td class="bio-note">Free PSA% under 25% (especially under 15%) increases the probability of prostate cancer. Combined with total PSA at 4.0, this needs urologist attention.</td></tr>
+        <tr><td class="bio-name">TSH (Thyroid)</td><td><span class="bio-val ok">1.36 mIU/L</span></td><td class="bio-range">0.40–4.50</td><td><span class="status-badge optimal">Well-Controlled</span></td><td class="bio-note">Thyroid well-managed on levothyroxine. TSH stable and in the low-normal range — good target for someone on thyroid medication.</td></tr>
+        <tr><td class="bio-name">T4, Free</td><td><span class="bio-val warn">2.16 ng/dL</span></td><td class="bio-range">0.82–1.77</td><td><span class="status-badge borderline">Mildly High (Jan '23)</span></td><td class="bio-note">Was mildly elevated in Jan '23 — may have prompted levothyroxine dose adjustment. Needs current recheck.</td></tr>
+        <tr><td class="bio-name">Homocysteine</td><td><span class="bio-val ok">10.3 µmol/L</span></td><td class="bio-range">&lt;15.2</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Important vascular and brain health marker. Normal. Ideally keep below 12. B vitamins help control this.</td></tr>
+        <tr><td class="bio-name">Leptin</td><td><span class="bio-val ok">2.1 ng/mL</span></td><td class="bio-range">0.3–13.4 (lean)</span></td><td><span class="status-badge optimal">Excellent</span></td><td class="bio-note">Very low leptin = no leptin resistance, lean metabolic state. This is great — means your hunger hormones are working properly.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FATTY ACIDS & NUTRIENTS -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">🐟 Fatty Acids, Nutrients & Toxicology</div><div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Function Health Panel: Jun 20, 2025</div></div>
+    <table class="bio-table">
+      <thead><tr><th>Marker</th><th>Your Value</th><th>Optimal Range</th><th>Status</th><th>What It Means</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">OmegaCheck (EPA+DPA+DHA)</td><td><span class="bio-val ok">9.1% wt</span></td><td class="bio-range">≥5.5%</td><td><span class="status-badge optimal">Excellent</span></td><td class="bio-note">Top tier. Omega-3 index above 8% is associated with significantly lower sudden cardiac death risk.</td></tr>
+        <tr><td class="bio-name">EPA (specific omega-3)</td><td><span class="bio-val bad">2.6% H</span></td><td class="bio-range">0.2–2.3%</span></td><td><span class="status-badge flag">Flagged High</span></td><td class="bio-note">EPA is slightly above normal range — this is actually from fish oil supplementation. Not clinically concerning but note the flag.</td></tr>
+        <tr><td class="bio-name">Omega-6/Omega-3 Ratio</td><td><span class="bio-val ok">4.2</span></td><td class="bio-range">3.7–14.4</td><td><span class="status-badge optimal">Optimal</span></td><td class="bio-note">Excellent ratio — most Americans are above 10. Your diet/supplementation is anti-inflammatory.</td></tr>
+        <tr><td class="bio-name">Zinc</td><td><span class="bio-val ok">86 mcg/dL</span></td><td class="bio-range">60–130</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Important for immune function, testosterone production, and wound healing.</td></tr>
+        <tr><td class="bio-name">Methylmalonic Acid</td><td><span class="bio-val ok">196 nmol/L</span></td><td class="bio-range">69–390</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">Functional B12 test — shows your B12 is actually working at the cellular level. Normal.</td></tr>
+        <tr><td class="bio-name">GGT</td><td><span class="bio-val ok">17 U/L</span></td><td class="bio-range">3–70</td><td><span class="status-badge optimal">Excellent</span></td><td class="bio-note">Low GGT is a longevity marker. Associated with lower cancer and metabolic risk.</td></tr>
+        <tr><td class="bio-name">Lead (Venous)</td><td><span class="bio-val ok">&lt;1.0 mcg/dL</span></td><td class="bio-range">&lt;3.5</td><td><span class="status-badge optimal">No Exposure</span></td><td class="bio-note">No heavy metal lead exposure detected.</td></tr>
+        <tr><td class="bio-name">ANA Screen (Autoimmune)</td><td><span class="bio-val ok">NEGATIVE</span></td><td class="bio-range">Negative</td><td><span class="status-badge optimal">Clear</span></td><td class="bio-note">No antinuclear antibodies — no signs of lupus, rheumatoid arthritis, or other autoimmune disease.</td></tr>
+        <tr><td class="bio-name">Rheumatoid Factor</td><td><span class="bio-val ok">&lt;10 IU/mL</span></td><td class="bio-range">&lt;14</td><td><span class="status-badge optimal">Negative</span></td><td class="bio-note">No signs of rheumatoid arthritis.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  TAB 3: TRENDS                            -->
+<!-- ══════════════════════════════════════════ -->
+<div id="tab-trends" class="tab-content">
+<div class="main">
+  <div class="section-title">Biomarker Trends <span style="font-size:14px;color:var(--muted);font-family:'DM Sans',sans-serif;font-style:normal">— Jan 2023 through Feb 2026</span></div>
+
+  <div class="notice">Dots represent each lab draw. Colors indicate status at that point. The rightmost dot is always your most recent value.</div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title" style="margin-bottom:20px">Key Marker Trajectories</div>
+
+    <!-- PSA -->
+    <div class="trend-row">
+      <div>
+        <div class="trend-label">PSA Total (ng/mL)</div>
+        <div style="font-size:11px;color:var(--muted)">Target: &lt;4.0</div>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;gap:2px;flex:1">
+        <div class="trend-line"></div>
+        <div class="trend-dot-wrap"><div class="trend-dot warn"></div><div class="trend-val">3.7<br>Jan'23</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot bad"></div><div class="trend-val">5.88<br>Sep'24</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot warn"></div><div class="trend-val">3.86<br>Mar'25</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot warn last"></div><div class="trend-val">4.0<br>Jun'25</div></div>
+      </div>
+    </div>
+
+    <!-- GLUCOSE -->
+    <div class="trend-row">
+      <div>
+        <div class="trend-label">Fasting Glucose (mg/dL)</div>
+        <div style="font-size:11px;color:var(--muted)">Target: &lt;100</div>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;gap:2px;flex:1">
+        <div class="trend-line"></div>
+        <div class="trend-dot-wrap"><div class="trend-dot warn"></div><div class="trend-val">102<br>Jan'23</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">94<br>Mar'25</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">93<br>Jun'25</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot warn last"></div><div class="trend-val">101<br>Feb'26</div></div>
+      </div>
+    </div>
+
+    <!-- LDL -->
+    <div class="trend-row">
+      <div>
+        <div class="trend-label">LDL Cholesterol (mg/dL)</div>
+        <div style="font-size:11px;color:var(--muted)">Target: &lt;100 (ideally &lt;70)</div>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;gap:2px;flex:1">
+        <div class="trend-line"></div>
+        <div class="trend-dot-wrap"><div class="trend-dot warn"></div><div class="trend-val">125<br>Jan'23</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">68<br>Nov'24</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok last"></div><div class="trend-val">71<br>Mar'25</div></div>
+      </div>
+    </div>
+
+    <!-- AST LIVER -->
+    <div class="trend-row">
+      <div>
+        <div class="trend-label">AST Liver Enzyme (U/L)</div>
+        <div style="font-size:11px;color:var(--muted)">Target: 10–35</div>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;gap:2px;flex:1">
+        <div class="trend-line"></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">29<br>Jan'23</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">23<br>Mar'25</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot bad"></div><div class="trend-val">65<br>Mar'25</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">23<br>Jun'25</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok last"></div><div class="trend-val">31<br>Feb'26</div></div>
+      </div>
+    </div>
+
+    <!-- EGFR -->
+    <div class="trend-row">
+      <div>
+        <div class="trend-label">eGFR Kidney (mL/min)</div>
+        <div style="font-size:11px;color:var(--muted)">Target: ≥60 (ideally ≥75)</div>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;gap:2px;flex:1">
+        <div class="trend-line"></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">76<br>Jan'23</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">71<br>Sep'24</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot warn"></div><div class="trend-val">65<br>Mar'25</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">77<br>Jun'25</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok last"></div><div class="trend-val">78<br>Feb'26</div></div>
+      </div>
+    </div>
+
+    <!-- LYMPHOCYTES -->
+    <div class="trend-row">
+      <div>
+        <div class="trend-label">Absolute Lymphocytes</div>
+        <div style="font-size:11px;color:var(--muted)">Target: 850–3900</div>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;gap:2px;flex:1">
+        <div class="trend-line"></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">1200<br>Jan'23</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot warn"></div><div class="trend-val">1099<br>Mar'25</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot warn"></div><div class="trend-val">1075<br>Jun'25</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot warn last"></div><div class="trend-val">961<br>Feb'26</div></div>
+      </div>
+    </div>
+
+    <!-- HDL -->
+    <div class="trend-row">
+      <div>
+        <div class="trend-label">HDL "Good" Cholesterol</div>
+        <div style="font-size:11px;color:var(--muted)">Target: ≥40 (ideally ≥60)</div>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;gap:2px;flex:1">
+        <div class="trend-line"></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">51<br>Jan'23</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">48<br>Sep'24</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok last"></div><div class="trend-val">55<br>Mar'25</div></div>
+      </div>
+    </div>
+
+    <!-- TOTAL CHOL -->
+    <div class="trend-row">
+      <div>
+        <div class="trend-label">Total Cholesterol (mg/dL)</div>
+        <div style="font-size:11px;color:var(--muted)">Target: &lt;200</div>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;gap:2px;flex:1">
+        <div class="trend-line"></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">186<br>Jan'23</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok"></div><div class="trend-val">161<br>Sep'24</div></div>
+        <div class="trend-dot-wrap"><div class="trend-dot ok last"></div><div class="trend-val">139<br>Mar'25</div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px">📊 Trend Summary — What the Data Is Telling You</div>
+    <div class="check-list">
+      <div class="check-item"><span style="color:var(--green)">✅</span><span><strong>Cardiovascular trajectory: Outstanding.</strong> Over 3 years, your lipid profile has dramatically improved — this is the statin plus your lifestyle doing exactly what it should.</span></div>
+      <div class="check-item"><span style="color:var(--green)">✅</span><span><strong>Liver: Spike and recovery.</strong> Something caused your liver enzymes to spike significantly in March 2025 (AST 65, ALT 48) — possibly a medication, supplement, alcohol event, or muscle exertion. Full recovery by Feb 2026 is reassuring, but worth discussing the cause with Dr. LaLonde.</span></div>
+      <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>Glucose: Creeping up.</strong> Was 102 in Jan '23 (already at the line), dipped to 93 in mid-2025, now back to 101. This yo-yo pattern needs attention — blood sugar control requires consistent effort.</span></div>
+      <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>Lymphocytes: Slow downward trend.</strong> From ~1200 in Jan '23 to 961 in Feb '26. Not alarming yet, but the direction is worth watching. Could reflect age, stress, or sleep quality.</span></div>
+      <div class="check-item"><span style="color:var(--red)">⚠️</span><span><strong>PSA: Complex story.</strong> High in Sep '24 (5.88), came down to 3.86 in Mar '25, back up to 4.0 in Jun '25. The trend is reassuring but the free PSA% of 13% is the more concerning data point.</span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  TAB 4: RISK PROFILE                      -->
+<!-- ══════════════════════════════════════════ -->
+<div id="tab-risks" class="tab-content">
+<div class="main">
+  <div class="section-title">Longevity Risk Profile</div>
+
+  <div class="summary-card" style="margin-bottom:24px">
+    <div class="card-title" style="margin-bottom:12px">Understanding Your Risk Landscape</div>
+    <p>Based on your lab history, biomarkers, medical history (hypothyroidism, hypertension, BPH), and current medications, here is an honest, plain-English assessment of your major health risks. This is not meant to alarm you — most of these risks are modifiable, and you are already doing many things right. The goal is aggressive, proactive prevention.</p>
+    <p>Your most significant risks are metabolic (blood sugar heading toward diabetes) and prostate-related (PSA at the limit with unfavorable free%). Your cardiovascular risk, which would typically be high given your age, history of hypertension, and hypothyroidism, is being well-managed by your current medication regimen and appears genuinely low-to-moderate. Your omega-3 status and lipid profile are protective.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title" style="margin-bottom:20px">Risk Categories</div>
+
+    <div class="risk-item">
+      <div class="risk-header">
+        <div><div class="risk-name">🔬 Prostate Cancer Risk</div><div class="risk-note">PSA 4.0 at limit, Free PSA% 13% (flagged low), PSA was 5.88 in Sep '24</div></div>
+        <div class="risk-level-text" style="color:var(--red)">Elevated — Act Now</div>
+      </div>
+      <div class="risk-bar-bg"><div class="risk-bar-fill high" style="width:72%"></div></div>
+      <div class="risk-note">The combination of PSA at the upper limit AND a low free PSA percentage (13% vs. the desired >25%) places you in a category where urologist evaluation is genuinely important. A low free % means more of your PSA is bound to protein, which is associated with a higher probability of malignant vs. benign prostate tissue. Next step: discuss with a urologist about MRI fusion biopsy or continued close monitoring. This is not a certainty of cancer — it's a signal to investigate.</div>
+    </div>
+
+    <div class="risk-item">
+      <div class="risk-header">
+        <div><div class="risk-name">🩸 Type 2 Diabetes / Prediabetes Risk</div><div class="risk-note">Fasting glucose 101 mg/dL, has been elevated across multiple draws</div></div>
+        <div class="risk-level-text" style="color:var(--amber)">Moderate — Addressable</div>
+      </div>
+      <div class="risk-bar-bg"><div class="risk-bar-fill medium" style="width:55%"></div></div>
+      <div class="risk-note">Your glucose crossed 100 in Jan '23 (102), briefly improved to 93, and is now 101 again. Without intervention, this can progress to type 2 diabetes over 5–10 years. The good news: at this stage, it's almost entirely reversible with diet, exercise, and possibly metformin. A HbA1c test (3-month average glucose) is essential to confirm and track this properly. Your triglycerides (45) and leptin (2.1) suggest you're metabolically healthy overall — the glucose issue appears to be diet/lifestyle driven, not metabolic syndrome.</div>
+    </div>
+
+    <div class="risk-item">
+      <div class="risk-header">
+        <div><div class="risk-name">🫀 Cardiovascular Disease Risk</div><div class="risk-note">Managed hypertension, hypothyroidism — but excellent lipids + omega-3</div></div>
+        <div class="risk-level-text" style="color:var(--amber)">Low-Moderate — Well-Managed</div>
+      </div>
+      <div class="risk-bar-bg"><div class="risk-bar-fill medium" style="width:38%"></div></div>
+      <div class="risk-note">On paper, a 67-year-old male with hypertension and hypothyroidism has elevated cardiac risk. Your medications are working well — lisinopril controlling blood pressure, metoprolol managing heart rate, and Lipitor driving your lipids to exceptional levels. Your triglycerides of 45 (very low), omega-3 index of 9.1% (protective), and CHOL/HDL ratio of 2.5 (excellent) all push risk down significantly. Key missing data: we haven't seen an ApoB, Lp(a), or coronary calcium score — these would sharpen this picture considerably.</div>
+    </div>
+
+    <div class="risk-item">
+      <div class="risk-header">
+        <div><div class="risk-name">🦋 Hormonal Decline / Low Testosterone</div><div class="risk-note">Total T 399 ng/dL, FSH elevated, DHEA-S lower-range</div></div>
+        <div class="risk-level-text" style="color:var(--amber)">Moderate — Optimization Opportunity</div>
+      </div>
+      <div class="risk-bar-bg"><div class="risk-bar-fill medium" style="width:45%"></div></div>
+      <div class="risk-note">Your testosterone is in the normal range, but 399 ng/dL is below what many longevity-focused physicians target (500–800+). The elevated FSH suggests your pituitary is working hard to stimulate the testes — a sign of primary hypogonadism beginning. This affects muscle mass, bone density, energy, mood, libido, and metabolic health. A conversation about TRT optimization with your doctor (or an endocrinologist) is warranted. Note: addressing this before a prostate cancer evaluation is complete would be premature.</div>
+    </div>
+
+    <div class="risk-item">
+      <div class="risk-header">
+        <div><div class="risk-name">🛡️ Immune Function / Infection Risk</div><div class="risk-note">Lymphocytes trending lower over 3 years — now at 961 cells/µL</div></div>
+        <div class="risk-level-text" style="color:var(--muted)">Low-Moderate — Monitor</div>
+      </div>
+      <div class="risk-bar-bg"><div class="risk-bar-fill low" style="width:28%"></div></div>
+      <div class="risk-note">Your lymphocyte count is still within the normal range but has been trending down over 3 years. These are critical immune cells. The gradual decline could reflect age (immunosenescence), chronic stress, poor sleep, or be an early signal. Ensure vaccinations are current (shingles, pneumonia, updated COVID/flu), optimize sleep, and discuss with Dr. LaLonde if this trend continues.</div>
+    </div>
+
+    <div class="risk-item">
+      <div class="risk-header">
+        <div><div class="risk-name">🧠 Metabolic Syndrome / Cognitive Risk</div><div class="risk-note">Glucose trending up — but strong omega-3, low triglycerides, normal homocysteine</div></div>
+        <div class="risk-level-text" style="color:var(--green)">Low — Keep Monitoring</div>
+      </div>
+      <div class="risk-bar-bg"><div class="risk-bar-fill low" style="width:20%"></div></div>
+      <div class="risk-note">Your brain health markers look good. Homocysteine 10.3 (normal), omega-3 index 9.1% (protective for cognition), and low triglycerides all support brain health. The glucose trend is the main risk here — high blood sugar over time is damaging to the brain. Controlling glucose is also cognitive protection.</div>
+    </div>
+
+  </div>
+
+  <!-- Missing Tests -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px">🔍 Critical Tests Not Yet in Your Record</div>
+    <div class="check-list">
+      <div class="check-item"><span style="color:var(--red)">❗</span><span><strong>HbA1c (Hemoglobin A1c)</strong> — 3-month average blood sugar. Essential given your glucose trend. Should be done immediately.</span></div>
+      <div class="check-item"><span style="color:var(--red)">❗</span><span><strong>Coronary Artery Calcium (CAC) Score</strong> — CT scan that detects calcification in coronary arteries. The single best test to know your actual heart attack risk. Particularly important given hypertension history.</span></div>
+      <div class="check-item"><span style="color:var(--red)">❗</span><span><strong>ApoB</strong> — More accurate than LDL for cardiovascular risk. Should be included in every lipid panel at your age.</span></div>
+      <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>Lp(a) Lipoprotein(a)</strong> — Genetic cardiac risk marker. Only needs to be measured once. Critical to know.</span></div>
+      <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>hsCRP (high-sensitivity C-Reactive Protein)</strong> — Inflammation marker. Important for cardiac and cancer risk assessment.</span></div>
+      <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>Insulin (fasting)</strong> — With glucose at 101, a fasting insulin level would clarify insulin resistance vs. other causes.</span></div>
+      <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>Vitamin D (25-OH)</strong> — Critical for bone health, immunity, cancer risk, and testosterone. Common deficiency in men over 60.</span></div>
+      <div class="check-item"><span style="color:var(--blue)">📋</span><span><strong>Prostate MRI (mpMRI)</strong> — Given PSA picture, an MRI should be discussed with a urologist before biopsy decision.</span></div>
+      <div class="check-item"><span style="color:var(--blue)">📋</span><span><strong>DEXA Scan (Bone Density)</strong> — Important for men on long-term testosterone changes. Baseline now is useful.</span></div>
+      <div class="check-item"><span style="color:var(--blue)">📋</span><span><strong>VO2 Max / Cardiorespiratory Fitness Test</strong> — One of the strongest predictors of longevity. Ideally done with a sports medicine physician.</span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  TAB 5: PREVENTION SCHEDULE               -->
+<!-- ══════════════════════════════════════════ -->
+<div id="tab-schedule" class="tab-content">
+<div class="main">
+  <div class="section-title">Aggressive Prevention Schedule</div>
+
+  <div class="summary-card" style="margin-bottom:24px">
+    <div class="card-title" style="margin-bottom:10px">Your Longevity Testing Philosophy</div>
+    <p>The schedule below is designed for someone who wants to catch problems at the earliest possible stage — not the minimum standard of care, but what a longevity-focused physician would recommend for a proactive 67-year-old male with your specific risk profile. It is intentionally aggressive. Bring this to your next appointment with Dr. LaLonde and discuss which elements to prioritize first.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:20px">Recommended Testing Calendar — 2026</div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">Apr</div><div class="sched-day">15</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>Urologist Consultation — PSA &amp; Free PSA Evaluation</h4>
+        <p>Discuss PSA 4.0 + free PSA% 13% with a urologist. Consider multiparametric MRI (mpMRI) of prostate before biopsy decision. This is your most time-sensitive action item.</p>
+        <span class="sched-tag urgent">Urgent — Within 6 Weeks</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">Apr</div><div class="sched-day">20</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>HbA1c + Fasting Insulin + Glucose Panel</h4>
+        <p>With fasting glucose at 101, you need a 3-month average (HbA1c) and fasting insulin to understand whether this is true prediabetes. Request this from Dr. LaLonde immediately.</p>
+        <span class="sched-tag urgent">Urgent — ASAP</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">May</div><div class="sched-day">1</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>Advanced Cardiac Panel: ApoB + Lp(a) + hsCRP + CAC Score</h4>
+        <p>Add ApoB and Lp(a) to your next lipid panel. Schedule a Coronary Artery Calcium CT scan — this should be a one-time test that tells you your actual coronary plaque burden. Zero = very reassuring. Anything above zero changes the calculus.</p>
+        <span class="sched-tag priority">Priority — This Quarter</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">May</div><div class="sched-day">15</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>Vitamin D + Magnesium + B12 Panel</h4>
+        <p>Vitamin D deficiency is common over 60 and affects immunity, testosterone, and cancer risk. Magnesium affects blood pressure and glucose. Add to next blood draw.</p>
+        <span class="sched-tag priority">Priority</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">Jun</div><div class="sched-day">1</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>Colonoscopy</h4>
+        <p>You mentioned colonoscopy as the next step after cardiac. At 67, this is critical — colorectal cancer is the third most common cancer in men. Depending on your last colonoscopy, this may be overdue.</p>
+        <span class="sched-tag priority">Priority — Schedule Now</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">Jul</div><div class="sched-day">1</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>Comprehensive Annual Blood Draw — Full Panel</h4>
+        <p>Repeat: CMP, CBC with diff, lipid panel, HbA1c, TSH + Free T4/T3, testosterone (total + free), PSA + free PSA, Vitamin D, ApoB, hsCRP, homocysteine, CBC. This should be your annual anchor lab.</p>
+        <span class="sched-tag annual">Annual</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">Aug</div><div class="sched-day">1</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>VO2 Max / Cardiorespiratory Fitness Assessment</h4>
+        <p>VO2 max is one of the strongest predictors of all-cause mortality. Every 1-unit increase extends life. A sports medicine physician or exercise physiologist can measure this. Also get a resting metabolic rate test.</p>
+        <span class="sched-tag routine">Recommended</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">Sep</div><div class="sched-day">1</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>DEXA Scan — Bone Density &amp; Body Composition</h4>
+        <p>Measures bone mineral density (osteoporosis screening) AND body fat percentage/lean muscle mass. Critical for men over 60, especially with lower testosterone. Baseline data is invaluable for longevity optimization.</p>
+        <span class="sched-tag routine">Baseline Test</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">Oct</div><div class="sched-day">1</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>Testosterone / Hormone Optimization Consultation</h4>
+        <p>After prostate evaluation is complete, meet with an endocrinologist or men's health specialist to discuss testosterone optimization, DHEA, and overall hormonal health for longevity. Only appropriate to address AFTER prostate situation is clarified.</p>
+        <span class="sched-tag routine">After Prostate Evaluation</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">Nov</div><div class="sched-day">1</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>Annual Skin Check — Dermatologist</h4>
+        <p>Full body skin exam for melanoma and other skin cancers. Annual for men over 50. Quick, easy, and often catches something important.</p>
+        <span class="sched-tag annual">Annual</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">Dec</div><div class="sched-day">1</div><div class="sched-year">2026</div></div>
+      <div class="sched-body">
+        <h4>Shingles Vaccine (Shingrix) — If Not Done</h4>
+        <p>Strongly recommended for adults over 50. Two doses. Shingles risk increases sharply with age and with lower immune cell counts (your lymphocytes are running low). Check with Dr. LaLonde if you've already received both doses.</p>
+        <span class="sched-tag routine">Immunization</span>
+      </div>
+    </div>
+
+    <div class="sched-item">
+      <div class="sched-date"><div class="sched-month">Jan</div><div class="sched-day">1</div><div class="sched-year">2027</div></div>
+      <div class="sched-body">
+        <h4>Sleep Study (if sleep issues persist)</h4>
+        <p>Given age, hypertension, and the role sleep plays in glucose control, testosterone, and immune function — if you have any sleep disruption, snoring, or daytime fatigue, a sleep study to rule out sleep apnea would be high-yield.</p>
+        <span class="sched-tag routine">Consider If Symptomatic</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  TAB 6: MEDICATIONS                       -->
+<!-- ══════════════════════════════════════════ -->
+<div id="tab-meds" class="tab-content">
+<div class="main">
+  <div class="section-title">Medications, Conditions &amp; History</div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">💊 Current Medications (from Jan 2023 records)</div>
+      <div class="med-item">
+        <div class="med-icon">❤️</div>
+        <div><div class="med-name">Lisinopril 10mg</div><div class="med-dose">1 tablet orally once daily · ACE Inhibitor (blood pressure)</div></div>
+      </div>
+      <div class="med-item">
+        <div class="med-icon">🦋</div>
+        <div><div class="med-name">Levothyroxine 150mcg</div><div class="med-dose">1 tablet orally once daily · Thyroid hormone replacement</div></div>
+      </div>
+      <div class="med-item">
+        <div class="med-icon">💓</div>
+        <div><div class="med-name">Metoprolol Succinate ER 50mg</div><div class="med-dose">1 tablet orally once daily · Beta-blocker (blood pressure/heart rate)</div></div>
+      </div>
+      <div class="med-item">
+        <div class="med-icon">🩸</div>
+        <div><div class="med-name">Lipitor (Atorvastatin) 10mg</div><div class="med-dose">1 tablet orally once daily at bedtime · Statin (cholesterol)</div></div>
+      </div>
+      <div class="med-item">
+        <div class="med-icon">🔵</div>
+        <div><div class="med-name">Tamsulosin 0.4mg</div><div class="med-dose">1 capsule orally once daily · Alpha-blocker (BPH/prostate urinary symptoms)</div></div>
+      </div>
+      <div class="notice" style="margin-top:16px;margin-bottom:0">
+        <strong>Note:</strong> Medications listed are from Jan 2023 records. Please confirm current regimen with Dr. LaLonde — doses or medications may have changed. The liver enzyme spike in early 2025 could have been medication-related.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">📋 Confirmed Medical Conditions</div>
+      <div class="med-item">
+        <div class="med-icon">🦋</div>
+        <div><div class="med-name">Hypothyroidism (Unspecified)</div><div class="med-dose">ICD-10: E03.9 · Managed on levothyroxine · TSH stable at 1.36</div></div>
+      </div>
+      <div class="med-item">
+        <div class="med-icon">❤️</div>
+        <div><div class="med-name">Essential Hypertension</div><div class="med-dose">ICD-10: I10 · Managed on lisinopril + metoprolol</div></div>
+      </div>
+      <div class="med-item">
+        <div class="med-icon">🔵</div>
+        <div><div class="med-name">BPH (Benign Prostatic Hyperplasia)</div><div class="med-dose">Suspected — on tamsulosin for urinary symptoms</div></div>
+      </div>
+      <div class="med-item">
+        <div class="med-icon">🔘</div>
+        <div><div class="med-name">Localized Enlarged Lymph Nodes</div><div class="med-dose">Noted Jan 2023 · Referred for ultrasound at Hoag · Confirm current status</div></div>
+      </div>
+      <div class="med-item">
+        <div class="med-icon">🔘</div>
+        <div><div class="med-name">Constipation (History)</div><div class="med-dose">ICD-9: 564.00 · Historical record</div></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="card-title" style="margin-bottom:12px">🧬 Key Demographics</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
+        <div><span style="color:var(--muted)">Sex:</span> Male</div>
+        <div><span style="color:var(--muted)">DOB:</span> Nov 2, 1958 (Age 67)</div>
+        <div><span style="color:var(--muted)">Height:</span> 71 in (5'11")</div>
+        <div><span style="color:var(--muted)">Weight:</span> 203.8 lbs (Jan 2023)</div>
+        <div><span style="color:var(--muted)">BMI:</span> 28.4 kg/m² (Overweight range)</div>
+        <div><span style="color:var(--muted)">Smoking:</span> Never smoker</div>
+        <div><span style="color:var(--muted)">Allergies:</span> None known</div>
+        <div><span style="color:var(--muted)">BP (Jan '23):</span> 138/81 mmHg</div>
+        <div><span style="color:var(--muted)">Heart Rate:</span> 63 bpm</div>
+        <div><span style="color:var(--muted)">Insured:</span> Blue Cross of CA</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px">💡 Medication Interactions &amp; Notes</div>
+    <div class="check-list">
+      <div class="check-item"><span>🔵</span><span><strong>Lisinopril + Potassium:</strong> ACE inhibitors can raise potassium. Your potassium is at 5.3 (upper limit of normal). Avoid high-potassium supplements and watch this number closely.</span></div>
+      <div class="check-item"><span>🦋</span><span><strong>Levothyroxine + Free T4:</strong> Your Free T4 was elevated (2.16 ng/dL) in Jan 2023 — this suggests the 150mcg dose may have been slightly high at that point. Confirm current TSH is in the 1–2 range, which is optimal for someone on thyroid medication.</span></div>
+      <div class="check-item"><span>🩸</span><span><strong>Lipitor (Statin) + Liver:</strong> The AST/ALT spike in early 2025 could be statin-related muscle/liver effect. Discuss with Dr. LaLonde whether a CK (creatine kinase) test was done at that time.</span></div>
+      <div class="check-item"><span>🔵</span><span><strong>Tamsulosin (BPH) + PSA:</strong> Tamsulosin is an alpha-blocker (not a 5-alpha reductase inhibitor like finasteride), so it does NOT artificially lower PSA readings. Your PSA values are real.</span></div>
+      <div class="check-item"><span>💊</span><span><strong>Omega-3 supplementation:</strong> Your omega-3 index of 9.1% and elevated EPA suggest you are taking fish oil supplements — likely 2–4g/day. This is excellent and contributing to your low triglycerides and cardiovascular protection.</span></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  TAB: CARDIAC WORKUP                      -->
+<!-- ══════════════════════════════════════════ -->
+<div id="tab-cardiac" class="tab-content">
+<div class="main">
+  <div class="section-title">❤️ Cardiac Workup <span style="font-size:14px;color:var(--muted);font-family:'DM Sans',sans-serif;font-style:normal">— Full picture across all studies</span></div>
+
+  <div class="notice">Cardiac data includes: CT Coronary Angiogram (May 1, 2024 · Hoag), Advanced Lipid Panel (Aug 2, 2024), Nuclear Stress Test / Myocardial Perfusion Imaging (Oct 3, 2025 · Dr. Sarabi), Echocardiogram (Jan 30, 2026 · Dr. Sarabi). Clinical Hx noted as CAD (Coronary Artery Disease).</div>
+
+  <!-- CARDIAC SUMMARY -->
+  <div class="summary-card" style="margin-bottom:24px">
+    <div class="card-title" style="margin-bottom:12px">🫀 The Cardiac Story — Plain English</div>
+    <p>The most important finding across your entire health record is your CT coronary angiogram from May 2024. This scan looked inside your actual coronary arteries using contrast dye and found two key things: a Coronary Artery Calcium (CAC) score of 523, placing you at the 75th percentile for a man your age, and — more significantly — a mixed plaque in your LAD (left anterior descending artery) that is causing a moderate stenosis of approximately 30%. The LAD is sometimes called the "widow maker" artery because it supplies a large territory of the heart muscle. A 30% narrowing is not an emergency — it does not require a stent or bypass — but it is a real lesion that demands respect, medication optimization, and regular monitoring.</p>
+    <p>The reassuring counterpoint: your October 2025 nuclear stress test was genuinely good news. You exercised to 92% of your predicted maximum heart rate, your heart showed no reversible perfusion defects (meaning no areas went without blood flow during stress), and your ejection fraction — the measure of how powerfully your heart pumps — is 66%, which is excellent. Your January 2026 echocardiogram confirms stable structure and function, with mild left ventricular hypertrophy (a thickening of the heart wall, expected with a history of hypertension) and mild mitral regurgitation (a small amount of backflow through the mitral valve — very common and not concerning at this level).</p>
+    <p>The bottom line: you have documented coronary artery disease with a moderate LAD lesion, but your heart is functioning extremely well right now. Annual stress testing is the correct protocol. Your job is to keep your LDL as low as possible, control blood pressure tightly, continue your omega-3 supplementation, and manage the blood sugar situation — all of which directly reduce progression of coronary plaque.</p>
+  </div>
+
+  <!-- CARDIAC METRICS GRID -->
+  <div class="grid4" style="margin-bottom:24px">
+    <div class="metric-tile">
+      <div class="icon">💀</div>
+      <div class="val warn">523</div>
+      <div class="label">CAC Score (Calcium)</div>
+      <div class="trend down-bad">75th percentile · Significant plaque burden</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">🫀</div>
+      <div class="val warn">~30%</div>
+      <div class="label">LAD Stenosis</div>
+      <div class="trend neutral">Moderate lesion · Mixed plaque · No stent needed</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">💪</div>
+      <div class="val good">66%</div>
+      <div class="label">Ejection Fraction (EF)</div>
+      <div class="trend up">✅ Excellent · Stress test Oct '25 · Echo Jan '26: 65–70%</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">🏃</div>
+      <div class="val good">92%</div>
+      <div class="label">Max HR Achieved (Stress)</div>
+      <div class="trend up">✅ Target HR reached · 14.8 METs · Good fitness</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">🔬</div>
+      <div class="val good">0</div>
+      <div class="label">SSS + SDS Score</div>
+      <div class="trend up">✅ Zero ischemia detected · Clear perfusion scan</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">📊</div>
+      <div class="val ok">71<span class="unit">mg/dL</span></div>
+      <div class="label">LDL (Mar '25)</div>
+      <div class="trend up">↓ Down from 88 (Aug '24) · Statin well-optimized</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">💓</div>
+      <div class="val ok">69 bpm</div>
+      <div class="label">Resting HR (Stress Test)</div>
+      <div class="trend neutral">Normal · Metoprolol controlling rate</div>
+    </div>
+    <div class="metric-tile">
+      <div class="icon">🩺</div>
+      <div class="val ok">126/64</div>
+      <div class="label">Baseline BP (Stress Test)</div>
+      <div class="trend up">✅ Well-controlled on medications</div>
+    </div>
+  </div>
+
+  <!-- STUDY BY STUDY -->
+  <div class="section-title" style="font-size:18px">Study-by-Study Results</div>
+
+  <!-- CT ANGIOGRAM -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">🏥 CT Coronary Angiogram with 3D Reconstruction</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">May 1, 2024 · Hoag Memorial Hospital Presbyterian · Ordered by Dr. LaLonde</div>
+      </div>
+      <div><span class="status-badge borderline">CAD CONFIRMED</span></div>
+    </div>
+
+    <div class="summary-card" style="background:#fffbeb;border-color:#fde68a;margin-bottom:20px">
+      <p style="font-size:13px"><strong style="color:var(--amber)">Key Finding:</strong> Total CAC Score = <strong style="color:var(--amber)">523</strong> — this is the 75th percentile for your age/sex group. This means 75% of men your age have LESS calcium than you. A score above 400 is considered high-risk and warrants aggressive risk factor management.</p>
+    </div>
+
+    <table class="bio-table">
+      <thead><tr><th>Artery / Segment</th><th>Calcium Score</th><th>Findings</th><th>Significance</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="bio-name">Left Main (LM)</td>
+          <td><span class="bio-val ok">Agatston: 0</span></td>
+          <td class="bio-note">No calcified plaque. No stenosis.</td>
+          <td><span class="status-badge optimal">Clear</span></td>
+        </tr>
+        <tr>
+          <td class="bio-name">LAD — Left Anterior Descending ⚠️</td>
+          <td><span class="bio-val warn">Agatston: 99%</span></td>
+          <td class="bio-note">Mixed plaque (soft + calcified) in the proximal LAD resulting in moderate ~30% stenosis.</td>
+          <td><span class="status-badge concern">Moderate Stenosis</span></td>
+        </tr>
+        <tr>
+          <td class="bio-name">1st Diagonal Branch</td>
+          <td><span class="bio-val ok">Agatston: 0</span></td>
+          <td class="bio-note">No calcified or soft plaque.</td>
+          <td><span class="status-badge optimal">Clear</span></td>
+        </tr>
+        <tr>
+          <td class="bio-name">Left Circumflex (LCx)</td>
+          <td><span class="bio-val ok">Agatston: 0</span></td>
+          <td class="bio-note">No calcified or soft plaque. No stenosis.</td>
+          <td><span class="status-badge optimal">Clear</span></td>
+        </tr>
+        <tr>
+          <td class="bio-name">1st–3rd Obtuse Marginal Branches</td>
+          <td><span class="bio-val ok">All 0</span></td>
+          <td class="bio-note">All clear. No plaque identified.</td>
+          <td><span class="status-badge optimal">Clear</span></td>
+        </tr>
+        <tr>
+          <td class="bio-name">Right Coronary Artery (RCA)</td>
+          <td><span class="bio-val ok">Agatston: 0</span></td>
+          <td class="bio-note">No calcified or soft plaque. No stenosis.</td>
+          <td><span class="status-badge optimal">Clear</span></td>
+        </tr>
+        <tr>
+          <td class="bio-name">Posterior Descending Artery</td>
+          <td><span class="bio-val ok">Agatston: 0</span></td>
+          <td class="bio-note">No calcified or soft plaque.</td>
+          <td><span class="status-badge optimal">Clear</span></td>
+        </tr>
+        <tr>
+          <td class="bio-name" style="color:var(--amber);font-weight:700">TOTAL CAC SCORE</td>
+          <td><span class="bio-val bad">523</span></td>
+          <td class="bio-note">75th percentile for age/sex. Dominated by LAD calcium.</td>
+          <td><span class="status-badge concern">High · Manage Aggressively</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div class="card-title" style="margin-bottom:12px">📖 What This Means</div>
+      <div class="check-list">
+        <div class="check-item"><span style="color:var(--amber)">⚠️</span><span>The LAD is the most important coronary artery — it supplies roughly 40-50% of the heart muscle. A 30% stenosis is "moderate" — not severe enough to require intervention, but real plaque that can progress.</span></div>
+        <div class="check-item"><span style="color:var(--amber)">⚠️</span><span>CAC of 523 means significant calcium is deposited in your arteries. Calcium itself doesn't cause heart attacks — but it's a marker of the total plaque burden. The dangerous plaques are often the softer, non-calcified ones (which you also have in the LAD).</span></div>
+        <div class="check-item"><span style="color:var(--green)">✅</span><span>The good news: all other major arteries (RCA, LCx, LM and all their branches) are completely clear. The disease is localized to the LAD.</span></div>
+        <div class="check-item"><span style="color:var(--blue)">💡</span><span>Your radiation dose for this scan: Series 1 (Stationary): 8.09 mSv; Series 2 (Spiral): 24.4 mSv; Total: ~502.88 mGy·cm. Keep this in mind for future scan decisions — CCTA involves meaningful radiation.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRESS TEST -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">🏃 Nuclear Stress Test — Myocardial Perfusion Imaging (SPECT)</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">October 3, 2025 · Dr. Dennis Sarabi, MD, PhD, FACC · Newport Beach</div>
+      </div>
+      <div><span class="status-badge optimal">PASSED — No Ischemia</span></div>
+    </div>
+
+    <div class="summary-card" style="background:#f0fdf4;border-color:#bbf7d0;margin-bottom:20px">
+      <p style="font-size:13px"><strong style="color:var(--green)">Excellent Result:</strong> Images show no reversible perfusion defect suggestive of significant ischemia. SSS and SDS both = 0 (perfect scores). Left Ventricular Ejection Fraction = <strong style="color:var(--green)">66%</strong> — excellent heart pump function.</p>
+    </div>
+
+    <table class="bio-table">
+      <thead><tr><th>Parameter</th><th>Result</th><th>Normal</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Protocol</td><td><span class="bio-val ok">Bruce Protocol — Treadmill</span></td><td class="bio-range">Standard</td><td class="bio-note">Standard exercise stress test protocol</td></tr>
+        <tr><td class="bio-name">Exercise Time</td><td><span class="bio-val ok">11:45 min</span></td><td class="bio-range">Good fitness</td><td class="bio-note">11+ minutes on Bruce = good-to-excellent fitness</td></tr>
+        <tr><td class="bio-name">METs Achieved</td><td><span class="bio-val ok">14.8 METs</span></td><td class="bio-range">≥10 = good</td><td class="bio-note">High METs = strong cardiovascular fitness. 14.8 is well above average for age 67.</td></tr>
+        <tr><td class="bio-name">Resting Heart Rate</td><td><span class="bio-val ok">69 bpm</span></td><td class="bio-range">60–100</td><td class="bio-note">Normal resting rate, controlled by metoprolol</td></tr>
+        <tr><td class="bio-name">Peak Heart Rate</td><td><span class="bio-val ok">141 bpm</span></td><td class="bio-range">154 predicted max</td><td class="bio-note">Achieved 92% of predicted maximum — target HR was met</td></tr>
+        <tr><td class="bio-name">% Max HR Achieved</td><td><span class="bio-val ok">92%</span></td><td class="bio-range">≥85% = adequate</td><td class="bio-note">Excellent — ≥85% required for a valid stress test</td></tr>
+        <tr><td class="bio-name">Baseline BP</td><td><span class="bio-val ok">126/64</span></td><td class="bio-range">Normal</td><td class="bio-note">Well-controlled blood pressure at rest</td></tr>
+        <tr><td class="bio-name">Peak BP</td><td><span class="bio-val ok">154/86</span></td><td class="bio-range">Normal response</td><td class="bio-note">Appropriate BP response to exercise stress</td></tr>
+        <tr><td class="bio-name">Resting ECG</td><td><span class="bio-val warn">Nonspecific T-wave abnormality</span></td><td class="bio-range">Normal sinus rhythm</td><td class="bio-note">Nonspecific T-wave change at rest — common finding, can reflect LVH, medication effects, or prior changes. Not diagnostic of ischemia.</td></tr>
+        <tr><td class="bio-name">Stress ECG</td><td><span class="bio-val ok">Sinus tachycardia</span></td><td class="bio-range">Normal</td><td class="bio-note">Heart rate increase with exercise — normal and expected</td></tr>
+        <tr><td class="bio-name">Symptoms</td><td><span class="bio-val ok">Fatigue (resolved with rest)</span></td><td class="bio-range">No chest pain</td><td class="bio-note">Fatigue is normal. No chest pain, no shortness of breath suggesting angina.</td></tr>
+        <tr><td class="bio-name">Perfusion — SSS</td><td><span class="bio-val ok">0</span></td><td class="bio-range">0 = normal</td><td class="bio-note">Summed Stress Score = 0. No areas of reduced blood flow during stress.</td></tr>
+        <tr><td class="bio-name">Perfusion — SDS</td><td><span class="bio-val ok">0</span></td><td class="bio-range">0 = normal</td><td class="bio-note">Summed Difference Score = 0. No reversible ischemia anywhere.</td></tr>
+        <tr><td class="bio-name">Ejection Fraction (EF)</td><td><span class="bio-val ok">66%</span></td><td class="bio-range">≥55%</td><td class="bio-note">Excellent. Your heart squeezes out 66% of its blood volume with each beat — strong pump function.</td></tr>
+        <tr><td class="bio-name">Basal Inferoseptal Attenuation</td><td><span class="bio-val warn">Small — unknown significance</span></td><td class="bio-range">Normal</td><td class="bio-note">A small artifact or attenuation at rest and stress, present on prior study too. Normal wall motion. Likely imaging artifact, not a true lesion. Noted as unchanged from previous.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ECHOCARDIOGRAM -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">📡 Echocardiogram — 2D, M-Mode, Color & Spectral Doppler</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">January 30, 2026 · Dr. Dennis Sarabi, MD, PhD, FACC · Compared to prior echo — no significant change</div>
+      </div>
+      <div><span class="status-badge optimal">STABLE — No Change</span></div>
+    </div>
+
+    <div class="summary-card" style="background:#f0fdf4;border-color:#bbf7d0;margin-bottom:20px">
+      <p style="font-size:13px"><strong style="color:var(--green)">Overall Impression (Dr. Sarabi):</strong> Normal left and right ventricular size and function. Mild LVH. Mild mitral regurgitation. No significant valve abnormalities. Possible trace/physiological pericardial effusion. Left ventricular ejection fraction estimated at 65–70%. Compared to prior echo — <strong>no significant change.</strong></p>
+    </div>
+
+    <table class="bio-table">
+      <thead><tr><th>Measurement</th><th>Value</th><th>Normal Range</th><th>Interpretation</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Aortic Root</td><td><span class="bio-val ok">33 mm</span></td><td class="bio-range">&lt;37mm</td><td class="bio-note">Normal aortic root diameter. No dilatation.</td></tr>
+        <tr><td class="bio-name">Left Atrium (LA)</td><td><span class="bio-val ok">30 mm</span></td><td class="bio-range">&lt;40mm</td><td class="bio-note">Normal left atrial size. Enlarged LA can indicate AF risk or diastolic dysfunction — yours is fine.</td></tr>
+        <tr><td class="bio-name">LVEDD (LV End-Diastolic Diameter)</td><td><span class="bio-val ok">44 mm</span></td><td class="bio-range">&lt;56mm</td><td class="bio-note">Normal LV size when the heart is relaxed and filling with blood.</td></tr>
+        <tr><td class="bio-name">LVESD (LV End-Systolic Diameter)</td><td><span class="bio-val ok">29 mm</span></td><td class="bio-range">20–40mm</td><td class="bio-note">Normal LV size when the heart has contracted and emptied.</td></tr>
+        <tr><td class="bio-name">IVSD (Interventricular Septal Diameter)</td><td><span class="bio-val warn">13 mm</span></td><td class="bio-range">&lt;10mm</td><td class="bio-note">Mildly thickened septum — this is the Mild LVH finding. Expected with a history of hypertension. Keeping BP controlled prevents further thickening.</td></tr>
+        <tr><td class="bio-name">PWD (Posterior Wall Diameter)</td><td><span class="bio-val warn">13 mm</span></td><td class="bio-range">&lt;10mm</td><td class="bio-note">Mild posterior wall thickening — confirms mild LVH. Consistent with hypertension history.</td></tr>
+        <tr><td class="bio-name">EF (Ejection Fraction)</td><td><span class="bio-val ok">65–70%</span></td><td class="bio-range">&gt;55%</td><td class="bio-note">Excellent. Strong pump function. Normal is ≥55%, you're well above.</td></tr>
+        <tr><td class="bio-name">Aortic Valve</td><td><span class="bio-val ok">Tri-leaflet, sclerosis noted</span></td><td class="bio-range">Normal</td><td class="bio-note">Aortic sclerosis (thickening/calcification of valve cusps) — very common over 65. No regurgitation. No significant stenosis.</td></tr>
+        <tr><td class="bio-name">Mitral Valve</td><td><span class="bio-val warn">Flexible · Mild regurgitation</span></td><td class="bio-range">No regurgitation ideal</td><td class="bio-note">Mild MR — a small amount of blood leaking backward through the mitral valve. Very common, not clinically significant at "mild" grade. Monitor annually.</td></tr>
+        <tr><td class="bio-name">Tricuspid Valve</td><td><span class="bio-val ok">Flexible · Trace regurgitation</span></td><td class="bio-range">Trace acceptable</td><td class="bio-note">Trace TR is found in a majority of normal adults. Not concerning.</td></tr>
+        <tr><td class="bio-name">Pulmonic Valve</td><td><span class="bio-val ok">Flexible · Trace regurgitation</span></td><td class="bio-range">Normal</td><td class="bio-note">Normal pulmonic valve function.</td></tr>
+        <tr><td class="bio-name">Pericardium</td><td><span class="bio-val ok">Normal · Possible trace effusion</span></td><td class="bio-range">No fluid</td><td class="bio-note">Possible trace physiological pericardial effusion — this is likely a tiny, normal amount of fluid and not clinically significant.</td></tr>
+        <tr><td class="bio-name">Intracardiac Mass/Shunt</td><td><span class="bio-val ok">None observed</span></td><td class="bio-range">None</td><td class="bio-note">No tumors, clots, or holes in the heart observed.</td></tr>
+        <tr><td class="bio-name">RV Size &amp; Function</td><td><span class="bio-val ok">Normal</span></td><td class="bio-range">Normal</td><td class="bio-note">Right ventricle normal in size and function — good for ruling out right heart strain or pulmonary hypertension.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ADVANCED LIPID PANEL -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">🩸 Advanced Lipid Panel — Cardio IQ</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">August 2, 2024 · Quest/Cleveland HeartLab · Dr. LaLonde</div>
+      </div>
+      <div><span class="status-badge optimal">Mostly Good</span></div>
+    </div>
+
+    <table class="bio-table">
+      <thead><tr><th>Marker</th><th>Value</th><th>Optimal</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Total Cholesterol</td><td><span class="bio-val ok">152 mg/dL</span></td><td class="bio-range">&lt;200</td><td><span class="status-badge optimal">Good</span></td><td class="bio-note">Well controlled. Improved further to 139 by Mar '25.</td></tr>
+        <tr><td class="bio-name">LDL Cholesterol</td><td><span class="bio-val ok">88 mg/dL</span></td><td class="bio-range">&lt;100 (&lt;70 w/CAD)</td><td><span class="status-badge borderline">Above CAD Target</span></td><td class="bio-note">With documented CAD (LAD stenosis), target LDL is &lt;70 mg/dL. At 88 in Aug '24, you were above goal. By Mar '25 you were at 71 — much closer. Push toward &lt;55 for high-risk CAD.</td></tr>
+        <tr><td class="bio-name">HDL Cholesterol</td><td><span class="bio-val ok">47 mg/dL</span></td><td class="bio-range">≥40</td><td><span class="status-badge optimal">Normal</span></td><td class="bio-note">In range but ideally ≥60 for best cardiac protection. Exercise is the best way to raise HDL.</td></tr>
+        <tr><td class="bio-name">Triglycerides</td><td><span class="bio-val ok">78 mg/dL</span></td><td class="bio-range">&lt;150</td><td><span class="status-badge optimal">Excellent</span></td><td class="bio-note">Very low. Excellent for cardiac risk.</td></tr>
+        <tr><td class="bio-name">LDL-P (Particle Number)</td><td><span class="bio-val ok">~1030 nmol/L</span></td><td class="bio-range">&lt;1000 optimal</span></td><td><span class="status-badge borderline">Borderline</span></td><td class="bio-note">LDL particle number is often more predictive of risk than LDL-C. Slightly above optimal range — confirms pushing LDL-C lower is warranted.</td></tr>
+        <tr><td class="bio-name">Small LDL-P</td><td><span class="bio-val ok">~231 nmol/L</span></td><td class="bio-range">&lt;527 optimal</span></td><td><span class="status-badge optimal">Good</span></td><td class="bio-note">Small dense LDL particles are the most atherogenic. Yours are in the optimal range.</td></tr>
+        <tr><td class="bio-name">HDL-P (Particle Number)</td><td><span class="bio-val ok">~33.0 µmol/L</span></td><td class="bio-range">&gt;30.5 optimal</span></td><td><span class="status-badge optimal">Good</span></td><td class="bio-note">HDL particle number — protective. Just above optimal.</td></tr>
+        <tr><td class="bio-name">Lipoprotein(a) — Lp(a)</td><td><span class="bio-val ok">~14 nmol/L</span></td><td class="bio-range">&lt;75 nmol/L</td><td><span class="status-badge optimal">Normal / Low Risk</span></td><td class="bio-note">Excellent news. Lp(a) is a genetic cardiac risk factor you can't change. Yours is low — this is not a driver of your CAD risk. Many people with CAD have high Lp(a); you don't.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CARDIAC ACTION PLAN -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px">🎯 Cardiac Management Action Plan</div>
+    <div class="check-list">
+      <div class="check-item"><span style="color:var(--red)">❗</span><span><strong>Annual stress testing — non-negotiable.</strong> Dr. Sarabi has you on annual nuclear stress tests. This is the correct protocol for known CAD with a moderate LAD lesion. Next due: October 2026. Do not skip this.</span></div>
+      <div class="check-item"><span style="color:var(--red)">❗</span><span><strong>Push LDL below 55 mg/dL.</strong> With documented CAD, current guidelines (ACC/AHA) recommend LDL &lt;70, and many longevity cardiologists target &lt;55 for high-risk patients. Your current statin (Lipitor 10mg) is doing well but may need dose optimization. Discuss with Dr. LaLonde — consider Lipitor 20–40mg or adding ezetimibe.</span></div>
+      <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>Control blood pressure aggressively.</strong> Your mild LVH and your LAD plaque are both driven by blood pressure. Target BP &lt;130/80. Your current regimen appears to be controlling it, but confirm at every visit.</span></div>
+      <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>Glucose control is now cardiac urgency, not just metabolic.</strong> Prediabetes and diabetes dramatically accelerate coronary plaque progression. Your glucose trend (101 in Feb '26) is directly relevant to your LAD lesion. HbA1c + fasting insulin needed immediately.</span></div>
+      <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>Maintain and increase exercise intensity.</strong> Your 14.8 METs on the stress test is excellent. Zone 2 cardio (brisk walking/cycling where you can hold a conversation) for 150+ min/week is the most evidence-based intervention for CAD patients. Add 2x/week resistance training for additional benefit.</span></div>
+      <div class="check-item"><span style="color:var(--green)">✅</span><span><strong>Continue omega-3 supplementation.</strong> Your OmegaCheck of 9.1% is cardioprotective. High-dose omega-3s (Vascepa/icosapentaenoic acid) at prescription doses have been shown to reduce cardiovascular events in CAD patients. Discuss with Dr. LaLonde.</span></div>
+      <div class="check-item"><span style="color:var(--green)">✅</span><span><strong>Annual echocardiogram.</strong> To monitor LVH progression, mitral regurgitation grade, and EF. Dr. Sarabi is doing this — continue.</span></div>
+      <div class="check-item"><span style="color:var(--blue)">📋</span><span><strong>Consider adding ApoB to every lipid panel.</strong> ApoB is a more direct measure of atherogenic particle burden than LDL-C alone, and your Cardio IQ panel suggests yours is borderline. This should be tracked over time alongside LDL.</span></div>
+      <div class="check-item"><span style="color:var(--blue)">📋</span><span><strong>Discuss aspirin therapy with Dr. LaLonde.</strong> For secondary prevention in known CAD, low-dose aspirin (81mg) is generally recommended unless contraindicated. Confirm you are on this (it wasn't in your medication list from 2023).</span></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════ -->
+<!--  TAB: COOPER CLINIC HISTORY               -->
+<!-- ══════════════════════════════════════════ -->
+<div id="tab-cooper" class="tab-content">
+<div class="main">
+  <div class="section-title">🏥 Cooper Clinic Preventive Exam <span style="font-size:14px;color:var(--muted);font-family:'DM Sans',sans-serif;font-style:normal">— April 11, 2022 · Dr. Robert H. Beard, MD</span></div>
+
+  <div class="notice">Your 5th visit to the Cooper Clinic — one of the world's most comprehensive preventive exams. This 17-page report from age 63 provides a critical baseline. Comparing it to your current data (age 67) reveals important trends — most notably the dramatic rise in CAC score (44 → 523), the significant testosterone drop (599 → 399 ng/dL), and glucose that has been borderline since 2014.</div>
+
+  <div class="summary-card" style="margin-bottom:24px">
+    <div class="card-title" style="margin-bottom:12px">📋 Cooper Clinic Summary — What Was Found in 2022</div>
+    <p>At age 63, Cooper assessed you as a healthy, active gentleman with well-controlled chronic conditions. Since that visit, several concerning changes have emerged: your coronary calcium score jumped from 44 (2014, 50th percentile) to 523 (2024, 75th percentile) — an enormous 10-year progression. Your LAD went from mild calcification to a moderate 30% stenosis. Your testosterone dropped 33% in just 3 years. And your glucose and HbA1c have been quietly creeping up, with no HbA1c retest since April 2022 despite continued borderline values.</p>
+    <p>The Cooper exam also captured findings often missed elsewhere: bilateral progressive hearing loss, mild spirometry abnormality, bilateral carotid atherosclerosis (confirming systemic arterial disease), and android fat distribution above the ideal ratio on DEXA scan. The family history is reassuring — no CAD, colon cancer, or prostate cancer in first-degree relatives.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><div class="card-title">📊 Longitudinal Lab Data — Cooper Clinic Record</div></div>
+
+    <div class="section-title" style="font-size:15px;margin-bottom:10px">Cholesterol (Trending Excellent Under Statin)</div>
+    <table class="bio-table" style="margin-bottom:20px">
+      <thead><tr><th>Marker</th><th>Apr 2022</th><th>Mar 2021</th><th>Sep 2020</th><th>Jun 2019</th><th>Apr 2018</th><th>Now (2025)</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Total Cholesterol</td><td><span class="bio-val ok">163</span></td><td>161</td><td>147</td><td>166</td><td>189</td><td><span class="bio-val ok">139</span></td></tr>
+        <tr><td class="bio-name">LDL</td><td><span class="bio-val warn">96</span></td><td>102</td><td>86</td><td>97</td><td>123</td><td><span class="bio-val ok">71</span></td></tr>
+        <tr><td class="bio-name">HDL</td><td><span class="bio-val ok">54</span></td><td>41</td><td>45</td><td>54</td><td>48</td><td><span class="bio-val ok">55</span></td></tr>
+        <tr><td class="bio-name">Triglycerides</td><td><span class="bio-val ok">66</span></td><td>102</td><td>69</td><td>68</td><td>81</td><td><span class="bio-val ok">45</span></td></tr>
+        <tr><td class="bio-name">Chol/HDL Ratio</td><td><span class="bio-val ok">3.0</span></td><td>3.9</td><td>3.3</td><td>3.1</td><td>3.9</td><td><span class="bio-val ok">2.5</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="section-title" style="font-size:15px;margin-bottom:10px">Glucose &amp; HbA1c — 12-Year Trend (Most Concerning Pattern)</div>
+    <table class="bio-table" style="margin-bottom:12px">
+      <thead><tr><th>Marker</th><th>Apr 2022</th><th>Mar 2021</th><th>Apr 2018</th><th>Feb 2017</th><th>Sep 2014</th><th>Feb 2026</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Fasting Glucose</td><td><span class="bio-val warn">103</span></td><td><span class="bio-val bad">111</span></td><td>100</td><td>100</td><td>106</td><td><span class="bio-val warn">101</span></td></tr>
+        <tr><td class="bio-name">HbA1c</td><td><span class="bio-val warn">5.7%</span></td><td>5.5%</td><td>5.3%</td><td>5.3%</td><td>5.5%</td><td><span class="bio-val bad">NOT TESTED IN 4 YEARS</span></td></tr>
+      </tbody>
+    </table>
+    <div class="notice" style="margin-bottom:20px">⚠️ Your glucose has been at or above 100 for 12 years. HbA1c has been 5.3–5.7% for 12 years — slowly creeping up. This is a decade-long prediabetes signal that has not been aggressively addressed. A current HbA1c is urgent.</div>
+
+    <div class="section-title" style="font-size:15px;margin-bottom:10px">PSA &amp; Testosterone — Dramatic Testosterone Decline</div>
+    <table class="bio-table" style="margin-bottom:20px">
+      <thead><tr><th>Marker</th><th>Apr 2022</th><th>Mar 2021</th><th>Apr 2018</th><th>Feb 2017</th><th>Sep 2014</th><th>Jun 2025</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">PSA</td><td>3.52</td><td>3.67</td><td><span class="bio-val warn">4.66</span></td><td>2.98</td><td>3.70</td><td><span class="bio-val warn">4.0</span></td></tr>
+        <tr><td class="bio-name">Testosterone (ng/dL)</td><td><span class="bio-val ok">599</span></td><td><span class="bio-val ok">607</span></td><td>446</td><td>519</td><td>372</td><td><span class="bio-val warn">399</span></td></tr>
+      </tbody>
+    </table>
+    <div class="notice" style="margin-bottom:20px">⚠️ Testosterone dropped from 599–607 ng/dL (2021–22) to 399 ng/dL (2025) — a 33% drop in 3 years. This exceeds normal age-related decline (typically ~1–2%/year). This should be evaluated after prostate workup is complete.</div>
+
+    <div class="section-title" style="font-size:15px;margin-bottom:10px">Other Notable Findings</div>
+    <table class="bio-table">
+      <thead><tr><th>Marker</th><th>Apr 2022 Value</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">hsCRP (Inflammation)</td><td><span class="bio-val ok">0.24 mg/L</span></td><td class="bio-note">Excellent — very low systemic inflammation despite CAD. Exercise and omega-3 are working.</td></tr>
+        <tr><td class="bio-name">Omega-3 Index</td><td><span class="bio-val ok">9.5%</span></td><td class="bio-note">Optimal. Now 9.1% — essentially maintained perfectly over 3 years.</td></tr>
+        <tr><td class="bio-name">Vitamin D</td><td><span class="bio-val ok">55.7 ng/mL</span></td><td class="bio-note">Good. Not rechecked since — order now. Target 50–70 ng/mL.</td></tr>
+        <tr><td class="bio-name">Vitamin B12</td><td><span class="bio-val warn">&gt;2000 pg/mL</span></td><td class="bio-note">Very elevated from supplementation. Dr. Beard recommended cutting dose in half. Your functional B12 (MMA=196) is normal, confirming B12 is adequate at cellular level.</td></tr>
+        <tr><td class="bio-name">Ferritin</td><td><span class="bio-val ok">179 ng/mL</span></td><td class="bio-note">Normal iron stores.</td></tr>
+        <tr><td class="bio-name">TSH History</td><td><span class="bio-val ok">1.25 (2022)</span></td><td class="bio-note">Dramatically improved from 0.0119 in 2021 (dangerously suppressed — was taking BOTH doses of levothyroxine simultaneously). Now well-controlled.</td></tr>
+        <tr><td class="bio-name">Bone Density (Mar 2021)</td><td><span class="bio-val ok">Normal</span></td><td class="bio-note">No osteoporosis. Repeat DEXA due — last was 2021/2022.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">💪 DEXA Body Composition (Apr 2022)</div>
+      <table class="bio-table">
+        <tbody>
+          <tr><td class="bio-name">Weight</td><td><span class="bio-val ok">202.4 lbs</span></td><td class="bio-range">Goal: 195–200</td></tr>
+          <tr><td class="bio-name">BMI</td><td><span class="bio-val ok">27.2</span></td><td class="bio-range">Overweight range</td></tr>
+          <tr><td class="bio-name">Total Body Fat %</td><td><span class="bio-val warn">26.1%</span></td><td class="bio-range">≤23% athletic ideal</td></tr>
+          <tr><td class="bio-name">Android (Belly) Fat %</td><td><span class="bio-val warn">33.6%</span></td><td class="bio-range">Reduce priority</td></tr>
+          <tr><td class="bio-name">A/G Ratio</td><td><span class="bio-val warn">1.39</span></td><td class="bio-range">&lt;1.2 ideal</td></tr>
+        </tbody>
+      </table>
+      <div style="font-size:12px;color:var(--muted);margin-top:10px">Android/belly-predominant fat distribution directly correlates with insulin resistance, coronary plaque progression, and high blood pressure. Reducing visceral fat is your highest-leverage metabolic target.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">🧬 Family History</div>
+      <div class="check-list">
+        <div class="check-item"><span>👩</span><span><strong>Mother (85 in 2022):</strong> Good health — protective</span></div>
+        <div class="check-item"><span>👨</span><span><strong>Father (86 in 2022):</strong> HTN, high cholesterol, heart valve replacement at 83</span></div>
+        <div class="check-item"><span>👦</span><span><strong>Brothers:</strong> One healthy (61), one obese/fair health (59)</span></div>
+        <div class="check-item"><span style="color:var(--green)">✅</span><span><strong>NO family history</strong> of CAD, colon cancer, or prostate cancer — significantly reduces your genetic baseline risk</span></div>
+      </div>
+      <div class="card-title" style="margin-bottom:10px;margin-top:16px">👂 Hearing (Apr 2022) — Worsening</div>
+      <div style="font-size:12px;color:var(--muted)">Bilateral sensorineural hearing loss — worsening since 2015. Left ear worse than right. Dr. Beard strongly recommended audiologist referral. Untreated hearing loss associated with cognitive decline and social isolation risk. Has this been addressed?</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px">🫀 Coronary Disease — Full Historical Timeline</div>
+    <table class="bio-table">
+      <thead><tr><th>Date</th><th>Test</th><th>Finding</th><th>Significance</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Sep 2014</td><td>CT Heart</td><td>CAC = 44 — 50th percentile</td><td class="bio-note">Early coronary calcium. Baseline established.</td></tr>
+        <tr><td class="bio-name">Sep 2014</td><td>Coronary CTA</td><td>Mild disease/calcification proximal 1st diagonal, proximal PDA</td><td class="bio-note">No LAD stenosis yet. Mild disease in smaller branches.</td></tr>
+        <tr><td class="bio-name">Feb 2017</td><td>Coronary CTA</td><td>Unchanged — mild disease, no severe stenosis</td><td class="bio-note">Stable. LAD mild calcification beginning.</td></tr>
+        <tr><td class="bio-name">May 2020</td><td>Stress Echo</td><td>EF 77%, moderate LVH, negative for ischemia</td><td class="bio-note">Heart function excellent, LVH noted, no ischemia.</td></tr>
+        <tr><td class="bio-name">Mar 2021</td><td>Coronary CTA</td><td>Mild &lt;20% disease — LAD, 1st diagonal, LCx, PDA</td><td class="bio-note">Still mild, disease spreading to more vessels but all &lt;20%.</td></tr>
+        <tr><td class="bio-name">Apr 2022</td><td>Carotid US</td><td>Mild atherosclerosis both carotid arteries, bilateral IMT thickening</td><td class="bio-note">Confirms systemic arterial disease — not just coronary.</td></tr>
+        <tr><td class="bio-name">May 2024</td><td>Coronary CTA</td><td><span class="bio-val bad">CAC = 523 (75th%ile) · LAD 30% moderate stenosis</span></td><td class="bio-note">Significant progression in 3 years. Mixed plaque in LAD = highest priority target.</td></tr>
+        <tr><td class="bio-name">Oct 2025</td><td>Nuclear Stress Test</td><td><span class="bio-val ok">EF 66%, no ischemia, SSS/SDS = 0</span></td><td class="bio-note">Excellent heart function. Plaque present but not causing flow problems yet.</td></tr>
+        <tr><td class="bio-name">Jan 2026</td><td>Echocardiogram</td><td><span class="bio-val ok">EF 65–70%, mild LVH, mild MR — stable</span></td><td class="bio-note">No significant change from prior echo. Stable and well-managed.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  TAB: ACTION ITEMS                        -->
+<!-- ══════════════════════════════════════════ -->
+<div id="tab-actions" class="tab-content">
+<div class="main">
+  <div class="section-title">🎯 Personalized Action Plan <span style="font-size:14px;color:var(--muted);font-family:'DM Sans',sans-serif;font-style:normal">— Aggressive longevity optimization for Michael McRoberts, age 67</span></div>
+
+  <div class="notice">This plan synthesizes findings from 14+ documents across your health record. It is not a replacement for physician guidance — bring it to your next appointments with Dr. LaLonde and Dr. Sarabi.</div>
+
+  <!-- URGENT -->
+  <div class="summary-card" style="background:#fef2f2;border-color:#fecaca;margin-bottom:24px">
+    <div class="card-title" style="color:var(--red);margin-bottom:14px">🚨 DO THESE WITHIN 30 DAYS</div>
+    <div class="check-list">
+      <div class="check-item"><span style="color:var(--red);font-size:18px">❗</span><span><strong>Get HbA1c + Fasting Insulin TODAY.</strong> Your glucose has been borderline since 2014. HbA1c was 5.7% in April 2022 — you haven't retested in 4 years while glucose has climbed to 101. If HbA1c is now ≥6.5%, you have crossed into diabetes. Call Dr. LaLonde and ask for this order immediately. This is the single most neglected item in your entire health record.</span></div>
+      <div class="check-item"><span style="color:var(--red);font-size:18px">❗</span><span><strong>Urologist within 6 weeks — PSA 4.0 + Free PSA 13%.</strong> This combination requires formal evaluation. A multiparametric prostate MRI should precede any biopsy decision. The clock is ticking on this one.</span></div>
+      <div class="check-item"><span style="color:var(--red);font-size:18px">❗</span><span><strong>Confirm with Dr. LaLonde: Are you on aspirin 81mg?</strong> You have documented CAD with a moderate LAD lesion. Aspirin for secondary prevention is standard of care. It was not on your 2023 medication list. Also discuss increasing your statin — your LDL target with confirmed CAD is &lt;55 mg/dL, not just &lt;100.</span></div>
+    </div>
+  </div>
+
+  <!-- DIET -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div style="font-size:32px">🥗</div>
+      <div>
+        <div class="section-title" style="margin-bottom:2px;font-size:20px">Diet</div>
+        <div style="font-size:13px;color:var(--muted)">Your primary targets: blood sugar control, LDL reduction, visceral fat loss, inflammation suppression</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div>
+        <div class="card-title" style="color:var(--green);margin-bottom:12px">EAT MORE OF THESE</div>
+        <div class="check-list">
+          <div class="check-item"><span>🫒</span><span><strong>Extra-virgin olive oil — 2–4 tbsp daily.</strong> Your single most impactful dietary change. Replace all butter, seed oils, and vegetable oil. The PREDIMED trial showed Mediterranean diet with EVOO reduced cardiovascular events by 30% in people exactly like you.</span></div>
+          <div class="check-item"><span>🐟</span><span><strong>Fatty fish 3–4x/week.</strong> Salmon, sardines, mackerel. You're already supplementing and your omega-3 index is optimal (9.1%). Continue. Consider asking Dr. LaLonde about prescription Vascepa (4g EPA/day) — proven to reduce cardiac events in CAD patients by 25%.</span></div>
+          <div class="check-item"><span>🥦</span><span><strong>Non-starchy vegetables at EVERY meal.</strong> Fill half your plate first — broccoli, spinach, kale, cauliflower, asparagus. Low glycemic, high fiber, anti-inflammatory, and they crowd out the refined carbs that are driving your glucose.</span></div>
+          <div class="check-item"><span>🫘</span><span><strong>Legumes 4–5x/week.</strong> Lentils, black beans, chickpeas. Best foods on earth for blood sugar control. Swap out rice, bread, and pasta for legumes as your primary carbohydrate base.</span></div>
+          <div class="check-item"><span>🫐</span><span><strong>Berries daily.</strong> Blueberries, raspberries, strawberries — low glycemic, high in polyphenols with strong cardiovascular and cognitive benefits. Best fruit choice for prediabetes management.</span></div>
+          <div class="check-item"><span>🥜</span><span><strong>One handful of walnuts or almonds daily.</strong> Walnuts contain plant omega-3s. Both reduce LDL and have cardiac benefits proven in clinical trials.</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="card-title" style="color:var(--red);margin-bottom:12px">ELIMINATE OR DRAMATICALLY REDUCE</div>
+        <div class="check-list">
+          <div class="check-item"><span>🍞</span><span><strong>Refined carbohydrates — your #1 enemy.</strong> White bread, white rice, pasta, crackers, bagels, pastries. These directly drive your glucose elevation, feed visceral fat accumulation, and raise triglycerides. Your 12-year glucose trend is telling you these are the problem. Replace with vegetables and legumes.</span></div>
+          <div class="check-item"><span>🥤</span><span><strong>Sugary drinks — eliminate completely.</strong> Sodas, fruit juices, sports drinks, sweetened coffees. Liquid sugar is the most efficient path to worsening insulin resistance. Even "healthy" orange juice is too glycemic for prediabetes.</span></div>
+          <div class="check-item"><span>🍺</span><span><strong>Reduce alcohol: 4/week → 1–2/week maximum.</strong> Alcohol raises triglycerides, fragments sleep (reducing testosterone and immune function), adds empty calories, worsens insulin resistance, and elevates blood pressure. Even one Friday night drink disrupts your weekend sleep quality.</span></div>
+          <div class="check-item"><span>🥩</span><span><strong>Red meat: maximum 1x/week. Eliminate processed meat.</strong> Deli meat, bacon, sausage are strongly associated with cardiovascular events. Replace with fish and poultry.</span></div>
+          <div class="check-item"><span>🧂</span><span><strong>Sodium: target &lt;2g/day.</strong> With hypertension and LVH, this matters. Restaurant food is the main culprit — ask for sauces on the side, choose grilled proteins.</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:20px;padding:18px;background:#f9fafb;border-radius:10px;border:1px solid var(--border)">
+      <div class="card-title" style="margin-bottom:12px">🕐 Meal Timing — A Free, High-Impact Tool</div>
+      <div class="check-list">
+        <div class="check-item"><span>⏰</span><span><strong>Eat within a 10-hour window</strong> (e.g., 8am–6pm). Time-restricted eating alone — without changing WHAT you eat — improves fasting glucose, reduces visceral fat, lowers blood pressure, and improves lipids. Your A/G ratio of 1.39 makes this especially important.</span></div>
+        <div class="check-item"><span>🚶</span><span><strong>Walk 10 minutes after every meal.</strong> Post-meal walks reduce blood glucose spikes by 30–40%. One of the most evidence-backed, free, and easy blood sugar interventions available.</span></div>
+        <div class="check-item"><span>🥗</span><span><strong>Eat vegetables and protein BEFORE carbohydrates</strong> at every meal. This "food sequencing" reduces post-meal glucose spikes by up to 40%.</span></div>
+        <div class="check-item"><span>🌙</span><span><strong>Stop eating 3 hours before bed.</strong> Late eating is a major driver of elevated fasting glucose and disrupted sleep. Finish dinner by 7pm if possible.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXERCISE -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div style="font-size:32px">🏋️</div>
+      <div>
+        <div class="section-title" style="margin-bottom:2px;font-size:20px">Exercise</div>
+        <div style="font-size:13px;color:var(--muted)">Your current routine is good. These targeted upgrades will maximize longevity impact.</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div>
+        <div class="card-title" style="color:var(--blue);margin-bottom:12px">THE MOST IMPORTANT UPGRADES</div>
+        <div class="check-list">
+          <div class="check-item"><span>💙</span><span><strong>Zone 2 cardio — 45+ minutes, 4x/week.</strong> Zone 2 is exercise at 120–135 bpm where you can hold a conversation. This is the most evidence-backed modality for metabolic health, mitochondrial density, fat oxidation, and cardiac protection. Your current Peloton rides may not be Zone 2 — get a heart rate monitor and confirm. 45 min Zone 2 > 30 min at random intensity.</span></div>
+          <div class="check-item"><span>🏋️</span><span><strong>Strength training: increase from 2x to 3–4x/week.</strong> This is the single highest-leverage change you can make for longevity. Muscle mass is the largest site of glucose disposal — more muscle = better insulin sensitivity and lower glucose. The research on muscle mass and all-cause mortality for men over 65 is unambiguous: it's the strongest predictor. Focus on compound movements: squats, deadlifts, rows, presses. Progressive overload every week.</span></div>
+          <div class="check-item"><span>⚡</span><span><strong>Add 1 HIIT session/week — after cardiac clearance from Dr. Sarabi.</strong> 8–10 rounds of 30–40 sec all-out effort / 2 min easy. HIIT is the most time-efficient way to reduce visceral fat and improve insulin sensitivity. Given your LAD lesion, get explicit clearance first. Your Oct 2025 stress test was clear — this is likely approved, but confirm.</span></div>
+          <div class="check-item"><span>🚶</span><span><strong>Post-meal walking — make this non-negotiable.</strong> 10 min after lunch, 10 min after dinner. Easiest, most impactful blood sugar tool available. Even slow walking blunts the post-meal glucose spike.</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="card-title" style="color:var(--green);margin-bottom:12px">TARGET WEEKLY STRUCTURE</div>
+        <table class="bio-table">
+          <thead><tr><th>Day</th><th>Activity</th><th>Duration</th></tr></thead>
+          <tbody>
+            <tr><td>Mon</td><td>Zone 2 Cardio (Peloton at 120–135 bpm)</td><td>45–50 min</td></tr>
+            <tr><td>Tue</td><td>Strength — Upper body + Core</td><td>45–60 min</td></tr>
+            <tr><td>Wed</td><td>Zone 2 (walk, bike, swim)</td><td>45 min</td></tr>
+            <tr><td>Thu</td><td>Strength — Lower body (squats, deadlifts)</td><td>45–60 min</td></tr>
+            <tr><td>Fri</td><td>HIIT (after MD clearance) OR Zone 2</td><td>30–40 min</td></tr>
+            <tr><td>Sat</td><td>Long Zone 2 walk + Stretching</td><td>60 min</td></tr>
+            <tr><td>Sun</td><td>Rest or light walk + Mobility work</td><td>30 min</td></tr>
+            <tr><td>Daily</td><td>Post-meal walks (lunch + dinner)</td><td>20 min</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:10px;font-size:12px;color:var(--amber)">⚠️ With LAD 30% stenosis: never exercise through chest pain, pressure, or jaw pain. Stop immediately and call 911. Carry nitroglycerin if prescribed. Warm up 5+ minutes before any intense effort.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLEEP -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div style="font-size:32px">😴</div>
+      <div>
+        <div class="section-title" style="margin-bottom:2px;font-size:20px">Sleep</div>
+        <div style="font-size:13px;color:var(--muted)">Sleep quality directly affects your glucose, testosterone, cardiac risk, immune function, and visceral fat — all at once</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div>
+        <div class="card-title" style="margin-bottom:12px">Why This Matters For YOUR Specific Risks</div>
+        <div class="check-list">
+          <div class="check-item"><span>🩸</span><span><strong>Glucose:</strong> Even one night of poor sleep raises fasting glucose by 15–25 mg/dL. Chronic sleep deprivation is a primary driver of insulin resistance — directly driving your prediabetes trajectory.</span></div>
+          <div class="check-item"><span>💪</span><span><strong>Testosterone:</strong> 70–80% of daily testosterone is produced during deep sleep stages. Your drop from 599 to 399 ng/dL may be significantly sleep-driven. More quality deep sleep = more testosterone.</span></div>
+          <div class="check-item"><span>🫀</span><span><strong>Coronary plaque:</strong> Sleep deprivation raises cortisol and inflammatory markers, which directly accelerate atherosclerosis. For your LAD lesion, quality sleep is as important as your statin.</span></div>
+          <div class="check-item"><span>🛡️</span><span><strong>Lymphocytes:</strong> Your immune cells are declining (961 cells/µL, trending down 3 years). Lymphocytes are produced and activated during sleep. Chronic sleep deficit directly suppresses immune cell production.</span></div>
+          <div class="check-item"><span>⚖️</span><span><strong>Visceral fat:</strong> Poor sleep raises ghrelin (hunger hormone) and lowers leptin (fullness hormone). This drives overeating and specifically promotes android/belly fat accumulation — exactly your pattern (A/G ratio 1.39).</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="card-title" style="margin-bottom:12px">Sleep Optimization Protocol</div>
+        <div class="check-list">
+          <div class="check-item"><span>⏰</span><span><strong>Target 7.5–8 hours in bed nightly.</strong> Non-negotiable. Below 7 hours significantly raises cardiac events, all-cause mortality, and metabolic disease. Set a hard bedtime alarm, not just a wake alarm.</span></div>
+          <div class="check-item"><span>🌡️</span><span><strong>Bedroom temperature: 65–68°F.</strong> Core body temperature must drop to enter deep sleep. This is one of the highest-impact sleep interventions most people never try.</span></div>
+          <div class="check-item"><span>📱</span><span><strong>No screens 60 min before bed.</strong> Blue light suppresses melatonin for hours. Use night mode, blue-light glasses, or switch to paperback books or podcasts after 9pm.</span></div>
+          <div class="check-item"><span>🍺</span><span><strong>No alcohol within 3 hours of bed.</strong> Alcohol fragments sleep architecture, eliminates most deep sleep and REM, and causes wake-ups at 2–3am. Even 1 drink worsens sleep quality measurably.</span></div>
+          <div class="check-item"><span>📅</span><span><strong>Same wake time 7 days/week (±30 min).</strong> Your circadian rhythm is anchored by wake time. Consistent wake time is more important than consistent bedtime for sleep quality.</span></div>
+          <div class="check-item"><span>🔬</span><span><strong>Sleep study — high priority.</strong> Male, age 67, BMI 27+, hypertension = classic sleep apnea profile. Sleep apnea dramatically worsens glucose, testosterone, blood pressure, and cardiac outcomes. It's very treatable with CPAP. Ask Dr. LaLonde for referral.</span></div>
+          <div class="check-item"><span>💍</span><span><strong>Track sleep objectively.</strong> Oura Ring, WHOOP, or Apple Watch. Gives you HRV, sleep stages, and SpO2. Low SpO2 overnight (&lt;90%) is a red flag for sleep apnea. Track for 30 days and share data with Dr. LaLonde.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPLEMENTS -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div style="font-size:32px">💊</div>
+      <div><div class="section-title" style="margin-bottom:2px;font-size:20px">Supplements — Optimize Your Current Stack</div></div>
+    </div>
+    <table class="bio-table">
+      <thead><tr><th>Supplement</th><th>Current Status</th><th>Action</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Fish Oil (Omega-3)</td><td>Daily — working perfectly (index 9.1%)</td><td class="bio-note">Continue current dose. Ask Dr. LaLonde about prescription Vascepa (icosapentaenoic acid 4g/day) — reduces cardiovascular events 25% in CAD patients in the REDUCE-IT trial.</td><td><span class="status-badge optimal">Continue + Upgrade</span></td></tr>
+        <tr><td class="bio-name">Vitamin D</td><td>Daily — was 55.7 ng/mL in 2022 (good)</td><td class="bio-note">Recheck current level — not tested in 3+ years. Target 50–70 ng/mL. Typical dose: 2,000–4,000 IU/day with K2 (helps direct calcium to bones not arteries).</td><td><span class="status-badge borderline">Recheck Level</span></td></tr>
+        <tr><td class="bio-name">Vitamin B12</td><td>Daily — level was &gt;2000 (too high)</td><td class="bio-note">Reduce to ½ current dose. Your MMA test confirms B12 is working fine at the cellular level. Excessive oral B12 is wasted money but not harmful.</td><td><span class="status-badge borderline">Reduce Dose</span></td></tr>
+        <tr><td class="bio-name">Vitamin E</td><td>Daily (dose unknown)</td><td class="bio-note">Review with Dr. LaLonde. High-dose Vitamin E (&gt;400 IU/day) has been associated with increased all-cause mortality in some large trials. Food-based E from olive oil, nuts, and seeds is preferred.</td><td><span class="status-badge concern">Review With MD</span></td></tr>
+        <tr><td class="bio-name">Magnesium Glycinate</td><td>Not currently taking</td><td class="bio-note">Add 300–400mg nightly. Supports sleep quality, blood pressure, glucose metabolism, and muscle function. Most Americans are deficient. Safe, cheap, and broadly beneficial for your risk profile.</td><td><span class="status-badge optimal">Add This</span></td></tr>
+        <tr><td class="bio-name">CoQ10</td><td>Not currently taking</td><td class="bio-note">Add 200mg/day with food. Statins deplete CoQ10 (critical for cellular energy). May reduce statin-related muscle fatigue. Broadly recommended for statin users — you've been on Lipitor since 2014.</td><td><span class="status-badge optimal">Add This</span></td></tr>
+        <tr><td class="bio-name">Berberine</td><td>Not taking — discuss if HbA1c elevated</td><td class="bio-note">If HbA1c comes back at 5.8%+, discuss berberine 500mg 3x/day with Dr. LaLonde. Studies show glucose and HbA1c reduction comparable to metformin, plus LDL-lowering effects. Natural, inexpensive, well-studied.</td><td><span class="status-badge borderline">Add If HbA1c Elevated</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- MEDICAL PRIORITIES TABLE -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px">📅 Complete 2026 Medical Priority Calendar</div>
+    <table class="bio-table">
+      <thead><tr><th>Timeline</th><th>Action</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">This week</td><td>Call Dr. LaLonde: Order HbA1c + fasting insulin + Vitamin D. Confirm aspirin 81mg prescription. Discuss statin dose increase for LDL &lt;55 target.</td><td><span class="status-badge concern">Urgent</span></td></tr>
+        <tr><td class="bio-name">Within 6 weeks</td><td>Urologist appointment for PSA 4.0 + Free PSA% 13% evaluation. Request prostate MRI discussion.</td><td><span class="status-badge concern">Urgent</span></td></tr>
+        <tr><td class="bio-name">Within 60 days</td><td>Dr. Sarabi follow-up: confirm Oct 2026 stress test schedule, discuss Vascepa prescription, clear HIIT exercise safety.</td><td><span class="status-badge borderline">Priority</span></td></tr>
+        <tr><td class="bio-name">Within 90 days</td><td>Audiologist — bilateral hearing loss worsening since 2015. Evaluate for hearing aids. Untreated hearing loss → cognitive decline risk.</td><td><span class="status-badge borderline">Priority</span></td></tr>
+        <tr><td class="bio-name">Q2 2026</td><td>Colonoscopy — with prior polyp (2011), you're on a 5–7 year surveillance cycle. Confirm whether the April 2022 Cooper Clinic colonoscopy was completed. If not done since 2022, it is due/overdue.</td><td><span class="status-badge borderline">Priority</span></td></tr>
+        <tr><td class="bio-name">Q2 2026</td><td>Sleep study referral. High pretest probability for sleep apnea given age, sex, BMI, and hypertension profile.</td><td><span class="status-badge borderline">Recommended</span></td></tr>
+        <tr><td class="bio-name">Q3 2026</td><td>Annual nuclear stress test (Oct 2026). Non-negotiable with known LAD stenosis. Schedule with Dr. Sarabi now.</td><td><span class="status-badge optimal">Annual — Schedule Now</span></td></tr>
+        <tr><td class="bio-name">Q3 2026</td><td>DEXA scan — repeat body composition. Last done Apr 2022 (body fat 26.1%, A/G 1.39). Track visceral fat reduction and muscle mass progress.</td><td><span class="status-badge optimal">Recommended</span></td></tr>
+        <tr><td class="bio-name">Q3 2026</td><td>Carotid ultrasound — Cooper recommended every 3 years (last: Apr 2022, due Apr 2025). Overdue by 1 year.</td><td><span class="status-badge borderline">Overdue</span></td></tr>
+        <tr><td class="bio-name">Q3–Q4 2026</td><td>Testosterone/hormone evaluation (AFTER prostate workup complete). 33% testosterone drop in 3 years needs investigation — possible TRT evaluation with endocrinologist.</td><td><span class="status-badge optimal">After Prostate Clearance</span></td></tr>
+        <tr><td class="bio-name">Q4 2026</td><td>Annual dermatology skin check.</td><td><span class="status-badge optimal">Annual</span></td></tr>
+        <tr><td class="bio-name">Q4 2026</td><td>Annual flu vaccine + confirm Shingrix series completed (strongly recommended — your lymphocytes are running low).</td><td><span class="status-badge optimal">Annual</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--  TAB: PROSTATE                            -->
+<!-- ══════════════════════════════════════════ -->
+<div id="tab-prostate" class="tab-content">
+<div class="main">
+  <div class="section-title">🔬 Prostate Cancer — Diagnosis, Surgery & Surveillance <span style="font-size:14px;color:var(--muted);font-family:'DM Sans',sans-serif;font-style:normal">— Radical Prostatectomy · Lennar Foundation Cancer Center</span></div>
+
+  <div class="notice">This section covers the complete prostate cancer history — from initial PSA elevation through radical prostatectomy and pathology results. All post-surgical surveillance decisions should be made with your urologic oncologist.</div>
+
+  <!-- HEADLINE OUTCOME BOX -->
+  <div class="summary-card" style="background:#f0fdf4;border-color:#bbf7d0;margin-bottom:24px">
+    <div class="card-title" style="color:#14532d;margin-bottom:14px">✅ Surgical Outcome — Key Facts Plain English</div>
+    <p style="color:#166534">You had a radical prostatectomy — complete surgical removal of the prostate gland and seminal vesicles. The pathology report brings both good and important news. The good: all surgical margins are clear (meaning the surgeon got clean edges around the cancer, with no cancer cells at the cut surfaces), and the cancer has not spread to the seminal vesicles, bladder neck, or lymph nodes. The important: the cancer was Gleason grade group 2 (3+4=7), which is intermediate-risk, and there is a small area of extraprostatic extension at the right anterior prostate — meaning the cancer had just begun to push beyond the prostate capsule at one focal point. This is a pT3a staging, not pT2 (organ-confined). It does not mean the surgery failed — your margins are still negative. But it does mean your PSA surveillance schedule must be taken seriously and followed without exception.</p>
+    <p style="color:#166534">The bottom line: the cancer was caught and removed with clean margins. The pT3a finding means there is a modestly elevated risk of biochemical recurrence (PSA rising after surgery) compared to fully organ-confined disease. Your ongoing PSA monitoring is now the most important single number in your health record.</p>
+    <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+      <span class="tag green">✅ All margins negative</span>
+      <span class="tag green">✅ No seminal vesicle invasion</span>
+      <span class="tag green">✅ No bladder neck invasion</span>
+      <span class="tag green">✅ No lymphovascular invasion</span>
+      <span class="tag amber">⚠️ pT3a — focal extraprostatic extension</span>
+      <span class="tag amber">⚠️ Gleason 3+4=7 — intermediate risk</span>
+      <span class="tag red">❗ PSA surveillance non-negotiable</span>
+    </div>
+  </div>
+
+  <!-- PATHOLOGY RESULTS -->
+  <div class="grid2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">📋 Pathology Report — Key Findings</div>
+      <table class="bio-table">
+        <thead><tr><th>Parameter</th><th>Result</th><th>Significance</th></tr></thead>
+        <tbody>
+          <tr><td class="bio-name">Procedure</td><td><span class="bio-val ok">Radical Prostatectomy</span></td><td class="bio-note">Complete removal of prostate + seminal vesicles</td></tr>
+          <tr><td class="bio-name">Histologic Type</td><td><span class="bio-val ok">Acinar adenocarcinoma</span></td><td class="bio-note">The most common type of prostate cancer (conventional)</td></tr>
+          <tr><td class="bio-name">Gleason Score</td><td><span class="bio-val warn">3+4 = 7 (Grade Group 2)</span></td><td class="bio-note">Intermediate risk. Pattern 3 predominates (less aggressive) with 6–10% pattern 4 (more aggressive). Not low risk, not high risk.</td></tr>
+          <tr><td class="bio-name">Pattern 4 Percentage</td><td><span class="bio-val warn">6–10%</span></td><td class="bio-note">Favorable — less than 20% pattern 4 is considered low-volume intermediate risk</td></tr>
+          <tr><td class="bio-name">Intraductal Carcinoma</td><td><span class="bio-val ok">Not identified</span></td><td class="bio-note">Good — IDC is associated with higher aggression and worse outcomes</td></tr>
+          <tr><td class="bio-name">Cribriform Glands</td><td><span class="bio-val ok">Not identified</span></td><td class="bio-note">Good — cribriform pattern is an adverse feature associated with metastatic risk</td></tr>
+          <tr><td class="bio-name">Tumor Volume</td><td><span class="bio-val ok">6–10% of prostate</span></td><td class="bio-note">Relatively small tumor burden — favorable</td></tr>
+          <tr><td class="bio-name">Tumor Location</td><td><span class="bio-val ok">Right anterior + Left anterior</span></td><td class="bio-note">Bilateral but anterior — not involving posterior neurovascular bundles</td></tr>
+          <tr><td class="bio-name">Surgical Margins</td><td><span class="bio-val ok">ALL NEGATIVE ✅</span></td><td class="bio-note">No cancer at any cut surface. This is the most important surgical outcome factor.</td></tr>
+          <tr><td class="bio-name">Extraprostatic Extension</td><td><span class="bio-val warn">Present — focal, right anterior</span></td><td class="bio-note">Cancer broke through the prostate capsule at one small area. "Focal" means limited extent — not extensive EPE. Upgrades stage to pT3a.</td></tr>
+          <tr><td class="bio-name">Seminal Vesicle Invasion</td><td><span class="bio-val ok">Not identified ✅</span></td><td class="bio-note">If present, would be pT3b — a worse stage. Clear is good.</td></tr>
+          <tr><td class="bio-name">Bladder Neck Invasion</td><td><span class="bio-val ok">Not identified ✅</span></td><td class="bio-note">Clear — no direct spread to bladder</td></tr>
+          <tr><td class="bio-name">Lymphovascular Invasion</td><td><span class="bio-val ok">Not identified ✅</span></td><td class="bio-note">No cancer in blood or lymph vessels — very favorable</td></tr>
+          <tr><td class="bio-name">Regional Lymph Nodes</td><td><span class="bio-val ok">Not submitted / pN not assigned</span></td><td class="bio-note">No nodes found in specimen — common in standard prostatectomy. If pre-op staging was low risk, extended node dissection may not have been performed.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px">📐 Specimen Measurements</div>
+      <table class="bio-table" style="margin-bottom:20px">
+        <tbody>
+          <tr><td class="bio-name">Prostate Weight</td><td><span class="bio-val ok">38.5 grams</span></td><td class="bio-note">Slightly enlarged but not dramatically so (normal ~20–30g)</td></tr>
+          <tr><td class="bio-name">Prostate Size</td><td><span class="bio-val ok">3.8 × 3.8 × 3 cm</span></td><td class="bio-note">Consistent with mild BPH — benign enlargement confirmed</td></tr>
+          <tr><td class="bio-name">Right Seminal Vesicle</td><td><span class="bio-val ok">4.2 × 1.2 × 0.5 cm</span></td><td class="bio-note">Normal — no invasion identified</td></tr>
+          <tr><td class="bio-name">Left Seminal Vesicle</td><td><span class="bio-val ok">3.0 × 1.5 × 0.5 cm</span></td><td class="bio-note">Normal — no invasion identified</td></tr>
+        </tbody>
+      </table>
+
+      <div class="card-title" style="margin-bottom:12px">🎯 pTNM Stage (AJCC 8th Edition)</div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:16px">
+        <div style="font-size:22px;font-weight:800;color:#92400e;font-family:'DM Serif Display',serif">pT3a N— M—</div>
+        <div style="font-size:12px;color:#78350f;margin-top:6px;line-height:1.6">
+          <strong>pT3a:</strong> Extraprostatic extension present (focal, right anterior)<br>
+          <strong>N—:</strong> Lymph node status not assigned (no nodes submitted)<br>
+          <strong>M—:</strong> Distant metastasis not evaluated at surgery<br>
+          <strong>Grade Group 2</strong> · Gleason 3+4=7 · Favorable intermediate risk
+        </div>
+      </div>
+
+      <div class="card-title" style="margin-bottom:12px">📊 Risk Stratification</div>
+      <div class="check-list">
+        <div class="check-item"><span style="color:var(--green)">✅</span><span><strong>Favorable intermediate risk factors:</strong> Grade group 2, &lt;20% pattern 4, no IDC, no cribriform, negative margins, no SVI, no LVI, focal EPE only</span></div>
+        <div class="check-item"><span style="color:var(--amber)">⚠️</span><span><strong>Unfavorable factors:</strong> pT3a (EPE present), bilateral anterior tumor involvement, pre-op PSA trajectory was concerning</span></div>
+        <div class="check-item"><span style="color:var(--blue)">📋</span><span><strong>Biochemical recurrence risk at 5 years</strong> for pT3a, GG2, negative margins: approximately 20–30% depending on post-op PSA nadir. This is why surveillance is critical.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PSA HISTORY -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title" style="margin-bottom:16px">📈 PSA History — Pre & Post Surgery</div>
+    <table class="bio-table" style="margin-bottom:16px">
+      <thead><tr><th>Date</th><th>PSA</th><th>Context</th><th>Significance</th></tr></thead>
+      <tbody>
+        <tr><td class="bio-name">Sep 2014</td><td><span class="bio-val ok">3.70</span></td><td>Cooper Clinic baseline</td><td class="bio-note">First recorded elevation. Referred to urologist (Dr. Yoshida).</td></tr>
+        <tr><td class="bio-name">Apr 2017</td><td><span class="bio-val ok">2.98</span></td><td>Cooper Clinic</td><td class="bio-note">Improved after prostatitis treatment</td></tr>
+        <tr><td class="bio-name">Apr 2018</td><td><span class="bio-val warn">4.66</span></td><td>Cooper Clinic</td><td class="bio-note">Elevated — leukocytes in urine. Prostatitis/BPH episode.</td></tr>
+        <tr><td class="bio-name">Mar 2021</td><td><span class="bio-val ok">3.67</span></td><td>Cooper Clinic</td><td class="bio-note">Improved again</td></tr>
+        <tr><td class="bio-name">Apr 2022</td><td><span class="bio-val ok">3.52</span></td><td>Cooper Clinic</td><td class="bio-note">Stable — reassuring at this point</td></tr>
+        <tr><td class="bio-name">Sep 2024</td><td><span class="bio-val bad">5.88</span></td><td>Quest Diagnostics</td><td class="bio-note">⚠️ Significant rise — triggered full evaluation</td></tr>
+        <tr><td class="bio-name">Mar 2025</td><td><span class="bio-val warn">3.86</span></td><td>Quest — post-eval</td><td class="bio-note">Declined — but free PSA% = 13% flagged (low)</td></tr>
+        <tr><td class="bio-name">Jun 2025</td><td><span class="bio-val warn">4.0 (Free 13%)</span></td><td>Function Health</td><td class="bio-note">Rising again. Free PSA% 13% &lt;15% threshold → biopsy decision</td></tr>
+        <tr><td class="bio-name">POST-SURGERY</td><td><span class="bio-val ok">Target: &lt;0.1</span></td><td>Post-prostatectomy nadir</td><td class="bio-note">PSA should drop to undetectable (&lt;0.1 ng/mL) within 6–8 weeks of surgery. This is the most important post-op test.</td></tr>
+      </tbody>
+    </table>
+    <div class="notice" style="margin-bottom:0">
+      <strong>Post-prostatectomy PSA definition of recurrence:</strong> A PSA that rises to ≥0.2 ng/mL on two consecutive measurements after reaching an undetectable nadir is considered biochemical recurrence (BCR). BCR does not necessarily mean metastatic disease — it may indicate residual local disease or micrometastatic disease that can be managed with salvage radiation. The earlier it is caught, the more treatable it is. This is why your PSA should be checked every 3–6 months for the first 2–3 years, then every 6–12 months if stable.
+    </div>
+  </div>
+
+  <!-- POST-OP ACTION PLAN -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px">🎯 Post-Prostatectomy Surveillance & Action Plan</div>
+    <div class="grid2">
+      <div>
+        <div class="card-title" style="color:var(--red);margin-bottom:12px">❗ Critical Surveillance Protocol</div>
+        <div class="check-list">
+          <div class="check-item"><span style="color:var(--red)">❗</span><span><strong>PSA every 3 months for years 1–2.</strong> Must reach undetectable (&lt;0.1 ng/mL) as the nadir. Any detectable PSA that then rises to 0.2+ on two draws = biochemical recurrence requiring immediate oncology action.</span></div>
+          <div class="check-item"><span style="color:var(--red)">❗</span><span><strong>PSA every 6 months in years 3–5</strong> if nadir is achieved and stable. Then annually thereafter if consistently undetectable.</span></div>
+          <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>Given pT3a staging</strong> — discuss with your urologist whether adjuvant radiation therapy (ART) to the prostate bed is appropriate. Some guidelines recommend consideration of ART for pT3a with focal EPE even with negative margins, particularly if PSA does not reach undetectable or rises early.</span></div>
+          <div class="check-item"><span style="color:var(--amber)">⚡</span><span><strong>If biochemical recurrence occurs</strong> — salvage radiation to the prostate bed is most effective when PSA is still below 0.5 ng/mL. Do not wait. Early salvage radiation has cure rates of 50–70% for pT3a recurrence.</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="card-title" style="color:var(--blue);margin-bottom:12px">📋 Quality of Life & Recovery</div>
+        <div class="check-list">
+          <div class="check-item"><span>🏃</span><span><strong>Pelvic floor exercises (Kegel exercises)</strong> — begin immediately post-catheter removal. The most evidence-based intervention for urinary continence recovery after prostatectomy. Do 3 sets of 10–15 contractions daily.</span></div>
+          <div class="check-item"><span>💊</span><span><strong>Erectile function recovery</strong> — penile rehabilitation (PDE5 inhibitors — sildenafil or tadalafil at low daily doses) started early post-surgery significantly improves long-term erectile function recovery. Discuss with urologist within the first month post-op.</span></div>
+          <div class="check-item"><span>🧬</span><span><strong>Testosterone therapy consideration</strong> — historically deferred after prostate cancer. However, emerging evidence (and current AUA guidelines) suggest TRT may be considered in prostatectomy patients with undetectable PSA and appropriate follow-up period (typically 1–2 years of stable undetectable PSA). Given your significant testosterone decline (599 → 399), this is worth discussing with your oncologist at the 1-year surveillance mark.</span></div>
+          <div class="check-item"><span>🍎</span><span><strong>Diet after prostate cancer:</strong> Mediterranean diet, reduced red meat, increased cruciferous vegetables (broccoli, Brussels sprouts contain sulforaphane — studied for prostate cancer recurrence reduction), and maintaining a healthy weight all have supporting evidence for reducing recurrence risk.</span></div>
+          <div class="check-item"><span>🏋️</span><span><strong>Exercise reduces recurrence risk</strong> — vigorous exercise (3+ hrs/week) is associated with 61% lower prostate cancer-specific mortality in post-treatment patients. This is one of the strongest lifestyle-cancer links in the literature. Your existing exercise routine is directly protective.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+</script>
+</body>
+</html>
